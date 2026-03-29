@@ -2,6 +2,21 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* ── 开源中文字体（CDN）─ */
+@import url("https://fonts.googleapis.cnpmjs.org/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.cnpmjs.org/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap");
+@import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css");
+
+/** 得意黑 Smiley Sans（开源） */
+@font-face {
+  font-family: "SmileySans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/atelier-anchor/smiley-sans@v1.1.1/fonts/SmileySans-Oblique.woff2")
+    format("woff2");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
