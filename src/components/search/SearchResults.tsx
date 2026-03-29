@@ -9,7 +9,7 @@ import { SongCard } from './SongCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function SearchResults() {
-  const { searchResults, searching, keyword } = useSongStore();
+  const { searchResults, searching, keyword, searchError } = useSongStore();
 
   if (searching) {
     return (
@@ -28,6 +28,17 @@ export function SearchResults() {
   }
 
   if (!keyword) return null;
+
+  if (searchError) {
+    return (
+      <div
+        className="w-full max-w-xl mt-8 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive"
+        role="alert"
+      >
+        {searchError}
+      </div>
+    );
+  }
 
   if (searchResults.length === 0) {
     return (

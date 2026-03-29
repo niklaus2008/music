@@ -9,7 +9,8 @@ import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +25,7 @@ import { useEditorStore } from '@/store/editor-store';
 export default function EditorPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { currentSong, parsedLyric, loadingLyric } = useSongStore();
+  const { currentSong, parsedLyric, loadingLyric, lyricError } = useSongStore();
   const { contentMode } = useEditorStore();
 
   useEffect(() => {
@@ -46,12 +47,16 @@ export default function EditorPage() {
       {/* 控制区 */}
       <aside className="order-2 flex w-full shrink-0 flex-col gap-4 md:order-1 md:w-[min(100%,380px)]">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild className="-ml-2 gap-1">
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-              重新搜索
-            </Link>
-          </Button>
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              '-ml-2 gap-1 inline-flex'
+            )}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            重新搜索
+          </Link>
         </div>
 
         <Card>
@@ -71,18 +76,14 @@ export default function EditorPage() {
             </div>
             <Separator />
             <EditorStylePanel />
-            {contentMode === 'quote' && (
+            {!loadingLyric && parsedLyric && (
               <>
                 <Separator />
                 <div>
                   <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    勾选金句
+                    {contentMode === 'quote' ? '勾选金句' : '歌词预览'}
                   </p>
-                  {loadingLyric ? (
-                    <Skeleton className="h-64 w-full rounded-lg" />
-                  ) : (
-                    <LyricSelector />
-                  )}
+                  <LyricSelector />
                 </div>
               </>
             )}
@@ -103,8 +104,11 @@ export default function EditorPage() {
           ) : parsedLyric ? (
             <LyricCanvas ref={canvasRef} />
           ) : (
-            <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
-              未能加载歌词
+            <div
+              className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-4 text-center text-sm text-destructive"
+              role="alert"
+            >
+              {lyricError ?? '未能加载歌词'}
             </div>
           )}
         </div>

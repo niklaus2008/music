@@ -17,9 +17,10 @@ import { CANVAS_SIZE } from '@/types/template';
 import { useSongStore } from '@/store/song-store';
 import { useEditorStore } from '@/store/editor-store';
 
-export const LyricCanvas = forwardRef<HTMLDivElement, Record<string, never>>(
+export const LyricCanvas = forwardRef<HTMLDivElement, object>(
   function LyricCanvas(_, ref) {
-      const {
+    const { currentSong, parsedLyric } = useSongStore();
+    const {
       template,
       aspectRatio,
       contentMode,

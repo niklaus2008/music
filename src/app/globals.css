@@ -1,11 +1,11 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-/* ── 开源中文字体（CDN）─ */
+/* 外部字体 @import 必须位于文件最前（早于 tailwind 与其它规则） */
 @import url("https://fonts.googleapis.cnpmjs.org/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap");
 @import url("https://fonts.googleapis.cnpmjs.org/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap");
 @import url("https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 /** 得意黑 Smiley Sans（开源） */
 @font-face {

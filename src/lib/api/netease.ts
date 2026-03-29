@@ -10,23 +10,69 @@ import type { RawLyric } from '@/types/lyric';
 
 /**
  * 网易云 API 基础地址
- * 使用公开部署的 NeteaseCloudMusicApi 服务
+ * 使用公开部署的 NeteaseCloudMusicApi 服务；可通过环境变量覆盖
  * @see https://github.com/Binaryify/NeteaseCloudMusicApi
  */
-const BASE_URL = process.env.NETEASE_API_URL || 'https://netease-cloud-music-api-five-roan.vercel.app';
+const BASE_URL =
+  process.env.NETEASE_API_URL ||
+  'https://netease-cloud-music-api-five-roan.vercel.app';
+
+/** 网易云返回的歌手项（精简字段） */
+interface NeteaseArtistItem {
+  id: number;
+  name: string;
+}
+
+/** 网易云返回的专辑对象（精简字段） */
+interface NeteaseAlbumRaw {
+  id?: number;
+  name?: string;
+  picUrl?: string;
+  publishTime?: number;
+}
+
+/** 网易云 cloudsearch 单条歌曲（精简字段） */
+interface NeteaseSongRaw {
+  id: number;
+  name: string;
+  ar?: NeteaseArtistItem[];
+  al?: NeteaseAlbumRaw;
+  dt?: number;
+}
+
+/** cloudsearch 响应体 */
+interface CloudSearchBody {
+  result?: { songs?: NeteaseSongRaw[] };
+}
+
+/** song/detail 响应体 */
+interface SongDetailBody {
+  songs?: NeteaseSongRaw[];
+}
+
+/** lyric 响应体 */
+interface LyricBody {
+  lrc?: { lyric?: string };
+  tlyric?: { lyric?: string };
+}
 
 /**
+ * 请求网易云 JSON 接口
  * @param {string} path - API 路径
  * @param {Record<string, string>} params - 查询参数
- * @returns {Promise<any>} 响应 JSON
+ * @returns {Promise<unknown>} 响应 JSON
  */
-async function fetchApi(path: string, params: Record<string, string> = {}): Promise<any> {
+async function fetchApi(
+  path: string,
+  params: Record<string, string> = {}
+): Promise<unknown> {
   const url = new URL(path, BASE_URL);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
+  /** 搜索与歌词需即时结果，不在服务端长期缓存 */
   const res = await fetch(url.toString(), {
     headers: { 'User-Agent': 'LyricCanvas/1.0' },
-    next: { revalidate: 3600 },
+    cache: 'no-store',
   });
 
   if (!res.ok) {
@@ -37,22 +83,24 @@ async function fetchApi(path: string, params: Record<string, string> = {}): Prom
 
 /**
  * 从网易云 API 歌手数组提取 Artist[]
- * @param {any[]} ar - 原始歌手数组
+ * @param {NeteaseArtistItem[] | undefined} ar - 原始歌手数组
  */
-function mapArtists(ar: any[] = []): Artist[] {
-  return ar.map((a) => ({ id: String(a.id), name: a.name }));
+function mapArtists(ar: NeteaseArtistItem[] | undefined): Artist[] {
+  return (ar ?? []).map((a) => ({ id: String(a.id), name: a.name }));
 }
 
 /**
  * 从网易云 API 专辑对象提取 Album
- * @param {any} al - 原始专辑对象
+ * @param {NeteaseAlbumRaw | undefined} al - 原始专辑对象
  */
-function mapAlbum(al: any = {}): Album {
-  const publishTime = al.publishTime ? new Date(al.publishTime) : null;
+function mapAlbum(al: NeteaseAlbumRaw | undefined): Album {
+  const x = al ?? {};
+  const publishTime =
+    typeof x.publishTime === 'number' ? new Date(x.publishTime) : null;
   return {
-    id: String(al.id || ''),
-    name: al.name || '',
-    coverUrl: al.picUrl || '',
+    id: String(x.id ?? ''),
+    name: x.name ?? '',
+    coverUrl: x.picUrl ?? '',
     publishYear: publishTime ? String(publishTime.getFullYear()) : undefined,
   };
 }
@@ -60,25 +108,25 @@ function mapAlbum(al: any = {}): Album {
 /** 网易云音乐数据源 */
 export const neteaseSource: MusicSource = {
   async search(keyword: string, limit = 20): Promise<SearchResult[]> {
-    const data = await fetchApi('/cloudsearch', {
+    const raw = (await fetchApi('/cloudsearch', {
       keywords: keyword,
       limit: String(limit),
       type: '1',
-    });
+    })) as CloudSearchBody;
 
-    const songs = data?.result?.songs || [];
-    return songs.map((s: any) => ({
+    const songs = raw.result?.songs ?? [];
+    return songs.map((s) => ({
       id: String(s.id),
       name: s.name,
       artists: mapArtists(s.ar),
       album: mapAlbum(s.al),
-      duration: s.dt || 0,
+      duration: s.dt ?? 0,
     }));
   },
 
   async getSongDetail(id: string): Promise<SongDetail> {
-    const data = await fetchApi('/song/detail', { ids: id });
-    const s = data?.songs?.[0];
+    const raw = (await fetchApi('/song/detail', { ids: id })) as SongDetailBody;
+    const s = raw.songs?.[0];
     if (!s) throw new Error(`Song not found: ${id}`);
 
     return {
@@ -86,15 +134,15 @@ export const neteaseSource: MusicSource = {
       name: s.name,
       artists: mapArtists(s.ar),
       album: mapAlbum(s.al),
-      duration: s.dt || 0,
+      duration: s.dt ?? 0,
     };
   },
 
   async getLyric(id: string): Promise<RawLyric> {
-    const data = await fetchApi('/lyric', { id });
+    const raw = (await fetchApi('/lyric', { id })) as LyricBody;
     return {
-      original: data?.lrc?.lyric || '',
-      translation: data?.tlyric?.lyric || undefined,
+      original: raw.lrc?.lyric ?? '',
+      translation: raw.tlyric?.lyric ?? undefined,
     };
   },
 };

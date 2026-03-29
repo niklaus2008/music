@@ -6,7 +6,7 @@
  */
 
 import { Label } from '@/components/ui/label';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -14,9 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { useEditorStore } from '@/store/editor-store';
 import { fontOptions } from '@/lib/templates';
 import type { AspectRatio, ContentMode } from '@/types/template';
+
+const ASPECT_RATIOS: AspectRatio[] = ['1:1', '3:4', '9:16'];
 
 /** 样式控制面板 */
 export function EditorStylePanel() {
@@ -36,39 +39,43 @@ export function EditorStylePanel() {
     <div className="space-y-5">
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">输出比例</Label>
-        <ToggleGroup
-          type="single"
-          value={aspectRatio}
-          onValueChange={(v) => v && setAspectRatio(v as AspectRatio)}
-          className="justify-start"
-        >
-          <ToggleGroupItem value="1:1" className="flex-1">
-            1:1
-          </ToggleGroupItem>
-          <ToggleGroupItem value="3:4" className="flex-1">
-            3:4
-          </ToggleGroupItem>
-          <ToggleGroupItem value="9:16" className="flex-1">
-            9:16
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="grid grid-cols-3 gap-2">
+          {ASPECT_RATIOS.map((r) => (
+            <Button
+              key={r}
+              type="button"
+              size="sm"
+              variant={aspectRatio === r ? 'default' : 'outline'}
+              className="w-full"
+              onClick={() => setAspectRatio(r)}
+            >
+              {r}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">内容模式</Label>
-        <ToggleGroup
-          type="single"
-          value={contentMode}
-          onValueChange={(v) => v && setContentMode(v as ContentMode)}
-          className="grid w-full grid-cols-2"
-        >
-          <ToggleGroupItem value="full" className="flex-1">
-            全文
-          </ToggleGroupItem>
-          <ToggleGroupItem value="quote" className="flex-1">
-            金句
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className={cn('grid grid-cols-2 gap-2')}>
+          {(
+            [
+              { id: 'full' as const, label: '全文' },
+              { id: 'quote' as const, label: '金句' },
+            ] as const
+          ).map(({ id, label }) => (
+            <Button
+              key={id}
+              type="button"
+              size="sm"
+              variant={contentMode === id ? 'default' : 'outline'}
+              className="w-full"
+              onClick={() => setContentMode(id as ContentMode)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-2">
