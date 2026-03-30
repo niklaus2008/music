@@ -15,8 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { exportImage } from '@/lib/export';
+import { exportLyricImage } from '@/lib/export';
 import { useSongStore } from '@/store/song-store';
+import { useEditorStore } from '@/store/editor-store';
 
 interface ExportPanelProps {
   /** 指向画布导出根节点（固定像素尺寸） */
@@ -34,6 +35,7 @@ const IS_DEV = process.env.NODE_ENV === 'development';
  */
 export function ExportPanel({ canvasRef }: ExportPanelProps) {
   const { currentSong } = useSongStore();
+  const { aspectRatio } = useEditorStore();
   const [busy, setBusy] = useState(false);
   const [paidDialogOpen, setPaidDialogOpen] = useState(false);
 
@@ -55,7 +57,7 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     if (!node || !currentSong) return;
     setBusy(true);
     try {
-      await exportImage(node, safeFileName(), 'free');
+      await exportLyricImage(node, safeFileName(), 'free', aspectRatio);
     } catch (e) {
       console.error(e);
       alert('导出失败，请重试或检查浏览器是否拦截下载');
@@ -72,7 +74,7 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     if (!node || !currentSong) return;
     setBusy(true);
     try {
-      await exportImage(node, safeFileName('hd'), 'paid');
+      await exportLyricImage(node, safeFileName('hd'), 'paid', aspectRatio);
       setPaidDialogOpen(false);
     } catch (e) {
       console.error(e);
@@ -92,7 +94,11 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
           onClick={handleFree}
         >
           <Download className="h-4 w-4" />
-          {busy ? '导出中…' : '免费下载（带水印）'}
+          {busy
+            ? '导出中…'
+            : aspectRatio === 'A4'
+              ? '免费下载（带水印，A4 多页为 ZIP）'
+              : '免费下载（带水印）'}
         </Button>
         <Button
           type="button"
@@ -104,6 +110,11 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
           高清下载
         </Button>
       </div>
+      {aspectRatio === 'A4' && (
+        <p className="text-xs text-muted-foreground">
+          A4 比例下，歌词超过单页高度会自动分页；多页时一键下载 ZIP（每页一张 PNG）。
+        </p>
+      )}
 
       <Dialog open={paidDialogOpen} onOpenChange={setPaidDialogOpen}>
         <DialogContent>

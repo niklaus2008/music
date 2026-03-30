@@ -19,7 +19,7 @@ import { useEditorStore } from '@/store/editor-store';
 import { fontOptions } from '@/lib/templates';
 import type { AspectRatio, ContentMode } from '@/types/template';
 
-const ASPECT_RATIOS: AspectRatio[] = ['1:1', '3:4', '9:16'];
+const ASPECT_RATIOS: AspectRatio[] = ['1:1', '3:4', '9:16', 'A4'];
 
 /** 样式控制面板 */
 export function EditorStylePanel() {

@@ -12,6 +12,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useEffect,
 } from 'react';
 import { CANVAS_SIZE } from '@/types/template';
 import { useSongStore } from '@/store/song-store';
@@ -31,6 +32,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cw, height: ch } = CANVAS_SIZE[aspectRatio];
     const [previewScale, setPreviewScale] = useState(1);
+    const isA4 = aspectRatio === 'A4';
 
     useLayoutEffect(() => {
       const el = containerRef.current;
@@ -38,15 +40,24 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
 
       const update = () => {
         const w = el.clientWidth;
-        if (w <= 0) return;
-        setPreviewScale(Math.min(1, (w - 4) / cw));
+        const h = el.clientHeight;
+        if (w <= 0 || h <= 0) return;
+        
+        if (isA4) {
+          // A4 模式：根据宽度等比缩放，确保完整显示
+          const scaleX = (w - 4) / cw;
+          const scaleY = h / ch;
+          setPreviewScale(Math.min(scaleX, scaleY, 1));
+        } else {
+          setPreviewScale(Math.min(1, (w - 4) / cw));
+        }
       };
 
       update();
       const ro = new ResizeObserver(update);
       ro.observe(el);
       return () => ro.disconnect();
-    }, [cw]);
+    }, [cw, ch, isA4]);
 
     const metaLine = useMemo(() => {
       if (!currentSong) return '';
@@ -114,32 +125,33 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
           : 'flex-end';
 
     return (
-      <div ref={containerRef} className="w-full max-w-full overflow-hidden">
+      <div ref={containerRef} className={isA4 ? "w-full h-full overflow-auto" : "w-full max-w-full overflow-hidden"}>
       <div
         className="mx-auto flex justify-center"
         style={{
-          height: ch * previewScale,
+          height: isA4 ? 'auto' : ch * previewScale,
         }}
       >
         <div
           style={{
             width: cw,
-            height: ch,
-            transform: `scale(${previewScale})`,
+            height: isA4 ? 'auto' : ch,
+            transform: isA4 ? `scale(${previewScale})` : `scale(${previewScale})`,
             transformOrigin: 'top center',
           }}
         >
           <div
             ref={ref}
-            className="box-border flex flex-col overflow-hidden rounded-sm shadow-sm"
+            className="box-border flex flex-col rounded-sm shadow-sm overflow-y-auto"
             style={{
               width: cw,
-              height: ch,
+              height: isA4 ? 'auto' : ch,
+              minHeight: isA4 ? ch : undefined,
               ...bgStyle,
               padding: `${pt}px ${pr}px ${pb}px ${pl}px`,
             }}
           >
-            <header className="shrink-0 space-y-2">
+            <header className="shrink-0 space-y-2" data-export-header>
               <h2
                 className="font-semibold leading-tight"
                 style={{
@@ -170,10 +182,13 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
               )}
             </header>
 
-            <div className="min-h-0 flex-1 overflow-hidden pt-6">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto pt-6 scrollbar-thin"
+              data-export-body
+            >
               {emptyQuote ? (
                 <div
-                  className="flex h-full items-center justify-center px-6 text-center opacity-70"
+                  className="flex h-full min-h-[200px] items-center justify-center px-6 text-center opacity-70"
                   style={{
                     fontFamily: activeFont,
                     fontSize: template.typography.fontSize - 2,
@@ -185,7 +200,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 </div>
               ) : isVertical ? (
                 <div
-                  className="flex h-full max-h-full flex-row-reverse flex-wrap content-start items-start justify-center gap-x-3 gap-y-1 overflow-hidden"
+                  className="flex h-full max-h-full flex-row-reverse flex-wrap content-start items-start justify-center gap-x-3 gap-y-1 overflow-y-auto scrollbar-thin"
                   style={{
                     fontFamily: activeFont,
                     fontSize: template.typography.fontSize,
@@ -198,11 +213,15 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                         key={`brk-${line.index}`}
                         className="h-4 w-full shrink-0 basis-full"
                         aria-hidden
+                        data-export-line
+                        data-line-index={line.index}
                       />
                     ) : (
                       <div
                         key={line.index}
                         className="max-h-full shrink-0"
+                        data-export-line
+                        data-line-index={line.index}
                         style={{
                           writingMode: 'vertical-rl',
                           textOrientation: 'mixed',
@@ -219,9 +238,19 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 <div className="space-y-0" style={horizontalBodyStyle}>
                   {bodyLines.map((line) =>
                     line.isBreak ? (
-                      <div key={`brk-${line.index}`} className="h-4" />
+                      <div
+                        key={`brk-${line.index}`}
+                        className="h-4"
+                        data-export-line
+                        data-line-index={line.index}
+                      />
                     ) : (
-                      <p key={line.index} className="m-0">
+                      <p
+                        key={line.index}
+                        className="m-0"
+                        data-export-line
+                        data-line-index={line.index}
+                      >
                         {line.text}
                       </p>
                     )
@@ -230,7 +259,12 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
               ) : (
                 <div className="space-y-3" style={horizontalBodyStyle}>
                   {bodyLines.map((line) => (
-                    <p key={line.index} className="m-0">
+                    <p
+                      key={line.index}
+                      className="m-0"
+                      data-export-line
+                      data-line-index={line.index}
+                    >
                       {line.text}
                     </p>
                   ))}
@@ -238,7 +272,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
               )}
             </div>
 
-            <footer className="mt-auto shrink-0 space-y-2 pt-8">
+            <footer className="mt-auto shrink-0 space-y-2 pt-8" data-export-footer>
               <p
                 className="opacity-90"
                 style={{

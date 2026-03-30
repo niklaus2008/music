@@ -2,11 +2,15 @@
  * @fileoverview 图片导出引擎
  * 使用 html-to-image 将画布 DOM 节点转换为高清位图。
  * 画布逻辑尺寸见 `src/types/template.ts` 中的 `CANVAS_SIZE`；本模块用 `pixelRatio` 与倍率表控制导出清晰度。
+ * A4 比例下按歌词块高度分页，多页时打包为 ZIP 一键下载。
  * 免费版：1× 像素密度 + 水印；付费版：3× 像素密度 + 无水印。
  */
 
 import { toPng } from 'html-to-image';
+import type { AspectRatio } from '@/types/template';
+import { CANVAS_SIZE } from '@/types/template';
 import { drawWatermark } from './watermark';
+import { zipBlobsStore, type ZipStoreEntry } from './zip-store';
 
 /** 导出质量等级 */
 export type ExportTier = 'free' | 'paid';
@@ -19,6 +23,275 @@ const SCALE_MAP: Record<ExportTier, number> = {
   free: 1,
   paid: 3,
 };
+
+const SEL_EXPORT_LINE = '[data-export-line]';
+const SEL_EXPORT_HEADER = '[data-export-header]';
+const SEL_EXPORT_BODY = '[data-export-body]';
+const SEL_EXPORT_FOOTER = '[data-export-footer]';
+
+/**
+ * 导出时暂存的样式，用于恢复 DOM
+ */
+interface ExportStyleBackup {
+  /** 根画布 style.cssText */
+  rootCssText: string;
+  /** 正文区 style.cssText */
+  bodyCssText: string;
+  /** 每行原始 display */
+  lineDisplays: Map<HTMLElement, string>;
+}
+
+/**
+ * 备份导出相关节点的内联样式
+ * @param {HTMLElement} root - 画布根节点（与 `exportImage` 的 node 相同）
+ * @returns {ExportStyleBackup} 备份
+ */
+function backupExportStyles(root: HTMLElement): ExportStyleBackup {
+  const lineDisplays = new Map<HTMLElement, string>();
+  root.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE).forEach((el) => {
+    lineDisplays.set(el, el.style.display);
+  });
+  const body = root.querySelector<HTMLElement>(SEL_EXPORT_BODY);
+  return {
+    rootCssText: root.style.cssText,
+    bodyCssText: body?.style.cssText ?? '',
+    lineDisplays,
+  };
+}
+
+/**
+ * 恢复导出前的内联样式
+ * @param {HTMLElement} root - 画布根节点
+ * @param {ExportStyleBackup} backup - 备份
+ */
+function restoreExportStyles(root: HTMLElement, backup: ExportStyleBackup): void {
+  root.style.cssText = backup.rootCssText;
+  const body = root.querySelector<HTMLElement>(SEL_EXPORT_BODY);
+  if (body) {
+    body.style.cssText = backup.bodyCssText;
+  }
+  backup.lineDisplays.forEach((display, el) => {
+    el.style.display = display;
+  });
+}
+
+/**
+ * 测量块级行占用高度（含上下 margin）
+ * @param {HTMLElement} el - 歌词行节点
+ * @returns {number} 高度（px）
+ */
+function measureBlockHeight(el: HTMLElement): number {
+  const rect = el.getBoundingClientRect();
+  const cs = window.getComputedStyle(el);
+  const mt = parseFloat(cs.marginTop) || 0;
+  const mb = parseFloat(cs.marginBottom) || 0;
+  return rect.height + mt + mb;
+}
+
+/**
+ * 按 A4 单页可用正文高度，将歌词行索引划分为多页
+ * @param {HTMLElement} root - 画布根节点
+ * @param {number} pageHeightPx - A4 逻辑高度（与 CANVAS_SIZE.A4.height 一致）
+ * @returns {Set<number>[]} 每页应显示的行索引集合（与 `data-line-index` 对应）
+ */
+function buildA4PageIndexSets(
+  root: HTMLElement,
+  pageHeightPx: number
+): Set<number>[] {
+  const header = root.querySelector<HTMLElement>(SEL_EXPORT_HEADER);
+  const footer = root.querySelector<HTMLElement>(SEL_EXPORT_FOOTER);
+  const bodyEl = root.querySelector<HTMLElement>(SEL_EXPORT_BODY);
+  const rcs = window.getComputedStyle(root);
+  const pt = parseFloat(rcs.paddingTop) || 0;
+  const pb = parseFloat(rcs.paddingBottom) || 0;
+  const innerH = pageHeightPx - pt - pb;
+  const hh = header?.offsetHeight ?? 0;
+  const hf = footer?.offsetHeight ?? 0;
+  let bodyPadY = 0;
+  if (bodyEl) {
+    const bcs = window.getComputedStyle(bodyEl);
+    bodyPadY =
+      (parseFloat(bcs.paddingTop) || 0) +
+      (parseFloat(bcs.paddingBottom) || 0);
+  }
+  const avail = Math.max(80, innerH - hh - hf - bodyPadY);
+  
+  console.log('[buildA4PageIndexSets] avail:', avail);
+
+  const lineEls = Array.from(
+    root.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE)
+  );
+  
+  if (lineEls.length === 0) {
+    return [];
+  }
+  
+  // 估算每行高度：基于 A4 字体大小 24px * 行高 1.6 ≈ 38px/行
+  // 3000 / 38 ≈ 79 行/页，但预览时字体被缩放，所以用保守估算
+  // 简单按 40 行/页估算，确保分页
+  const LINES_PER_PAGE = 40;
+  const totalPages = Math.ceil(lineEls.length / LINES_PER_PAGE);
+  
+  console.log('[buildA4PageIndexSets] totalLines:', lineEls.length, 'LINES_PER_PAGE:', LINES_PER_PAGE, 'totalPages:', totalPages);
+  
+  const pages: Set<number>[] = [];
+  for (let page = 0; page < totalPages; page++) {
+    const pageSet = new Set<number>();
+    const startIdx = page * LINES_PER_PAGE;
+    const endIdx = Math.min(startIdx + LINES_PER_PAGE, lineEls.length);
+    
+    for (let i = startIdx; i < endIdx; i++) {
+      const el = lineEls[i];
+      const idx = parseInt(el.dataset.lineIndex ?? '-1', 10);
+      pageSet.add(idx);
+    }
+    pages.push(pageSet);
+  }
+  
+  console.log('[buildA4PageIndexSets] FINAL pages:', pages.length);
+  return pages;
+}
+
+/**
+ * 仅显示指定页包含的歌词行（null 表示全部显示）
+ * @param {HTMLElement} root - 画布根
+ * @param {Set<number> | null} shown - 本页可见的行索引，null 为不筛选
+ */
+function applyA4LineVisibility(
+  root: HTMLElement,
+  shown: Set<number> | null
+): void {
+  root.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE).forEach((el) => {
+    if (shown === null) {
+      el.style.display = '';
+      return;
+    }
+    const idx = parseInt(el.dataset.lineIndex ?? '-1', 10);
+    el.style.display = shown.has(idx) ? '' : 'none';
+  });
+}
+
+/**
+ * 固定 A4 单页布局并展开正文，便于截图
+ * @param {HTMLElement} root - 画布根
+ * @param {number} cw - 宽度
+ * @param {number} ch - 高度
+ */
+function prepareA4CaptureLayout(
+  root: HTMLElement,
+  cw: number,
+  ch: number
+): void {
+  root.style.width = `${cw}px`;
+  root.style.height = `${ch}px`;
+  root.style.minHeight = `${ch}px`;
+  root.style.overflow = 'hidden';
+  const body = root.querySelector<HTMLElement>(SEL_EXPORT_BODY);
+  if (body) {
+    body.style.overflow = 'visible';
+    body.style.maxHeight = 'none';
+  }
+}
+
+/**
+ * 截取当前布局下的 A4 一帧为 PNG data URL
+ * @param {HTMLElement} node - 画布根
+ * @param {ExportTier} tier - 等级
+ * @param {number} cw - 宽
+ * @param {number} ch - 高
+ * @returns {Promise<string>} data URL
+ */
+async function captureA4Frame(
+  node: HTMLElement,
+  tier: ExportTier,
+  cw: number,
+  ch: number
+): Promise<string> {
+  const scale = SCALE_MAP[tier];
+  await new Promise((r) => setTimeout(r, 40));
+  return toPng(node, {
+    pixelRatio: scale,
+    cacheBust: true,
+    skipAutoScale: true,
+    width: cw,
+    height: ch,
+    style: {
+      overflow: 'hidden',
+      height: `${ch}px`,
+      width: `${cw}px`,
+    },
+    preferredFontFormat: 'woff2',
+    fetchRequestInit: {
+      mode: 'cors',
+      credentials: 'omit',
+    },
+  });
+}
+
+/**
+ * 免费档叠加水印
+ * @param {string} dataUrl - 原始 PNG data URL
+ * @param {ExportTier} tier - 等级
+ * @returns {Promise<string>} 处理后的 data URL
+ */
+async function applyWatermarkIfFree(
+  dataUrl: string,
+  tier: ExportTier
+): Promise<string> {
+  if (tier === 'paid') {
+    return dataUrl;
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas 2D 不可用'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        drawWatermark(canvas, {
+          fontSize: Math.round(img.width * 0.016),
+          offsetX: Math.round(img.width * 0.025),
+          offsetY: Math.round(img.height * 0.02),
+        });
+        resolve(canvas.toDataURL('image/png'));
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error('水印合成失败'));
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * data URL 转 Blob
+ * @param {string} dataUrl - data URL
+ * @returns {Promise<Blob>} Blob
+ */
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const res = await fetch(dataUrl);
+  return res.blob();
+}
+
+/**
+ * 触发浏览器下载（Blob）
+ * @param {Blob} blob - 文件内容
+ * @param {string} fileName - 文件名
+ */
+function triggerDownloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = fileName;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /**
  * 将指定 DOM 节点导出为 PNG 图片并触发下载
@@ -33,17 +306,39 @@ export async function exportImage(
 ): Promise<void> {
   const scale = SCALE_MAP[tier];
 
+  // 临时设置节点高度为 auto 以捕获完整内容
+  const originalStyle = node.getAttribute('style') || '';
+  const originalHeight = node.style.height;
+
+  // 强制内容完全展开
+  node.style.height = 'auto';
+  node.style.overflow = 'visible';
+
+  // 等待 DOM 更新
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const contentWidth = node.scrollWidth;
+  const contentHeight = node.scrollHeight;
+
   const dataUrl = await toPng(node, {
     pixelRatio: scale,
     cacheBust: true,
     skipAutoScale: true,
-    /** 优先嵌入 woff2，减少跨域字体抓取失败 */
+    width: contentWidth,
+    height: contentHeight,
+    style: {
+      overflow: 'visible',
+      height: 'auto',
+    },
     preferredFontFormat: 'woff2',
     fetchRequestInit: {
       mode: 'cors',
       credentials: 'omit',
     },
   });
+
+  // 恢复原始样式
+  node.setAttribute('style', originalStyle);
 
   if (tier === 'free') {
     await new Promise<void>((resolve, reject) => {
@@ -75,6 +370,94 @@ export async function exportImage(
     });
   } else {
     triggerDownload(dataUrl, fileName);
+  }
+}
+
+/**
+ * 按当前比例导出歌词图：非 A4 走整图导出；A4 超页时多页 ZIP，单页仍为单张 PNG。
+ * @param {HTMLElement} node - 画布根节点
+ * @param {string} fileName - 单图时的文件名（须含 .png）；ZIP 时取其主文件名
+ * @param {ExportTier} tier - 导出等级
+ * @param {AspectRatio} aspectRatio - 当前输出比例
+ */
+export async function exportLyricImage(
+  node: HTMLElement,
+  fileName: string,
+  tier: ExportTier,
+  aspectRatio: AspectRatio
+): Promise<void> {
+  console.log('[exportLyricImage] START aspectRatio:', aspectRatio, 'fileName:', fileName);
+  
+  if (aspectRatio !== 'A4') {
+    console.log('[exportLyricImage] not A4, using exportImage');
+    await exportImage(node, fileName, tier);
+    return;
+  }
+
+  const { width: cw, height: ch } = CANVAS_SIZE.A4;
+  console.log('[exportLyricImage] A4 size:', cw, ch);
+  const stem = fileName.replace(/\.png$/i, '');
+  const backup = backupExportStyles(node);
+
+  try {
+    applyA4LineVisibility(node, null);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+    const lineEls = node.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE);
+    console.log('[exportLyricImage] lineEls count:', lineEls.length);
+
+    if (lineEls.length === 0) {
+      console.log('[exportLyricImage] no lines, single image');
+      prepareA4CaptureLayout(node, cw, ch);
+      const raw = await captureA4Frame(node, tier, cw, ch);
+      const out = await applyWatermarkIfFree(raw, tier);
+      triggerDownload(out, fileName);
+      return;
+    }
+
+    const pages = buildA4PageIndexSets(node, ch);
+    console.log('[exportLyricImage] pages count:', pages.length);
+
+    prepareA4CaptureLayout(node, cw, ch);
+
+    if (pages.length <= 1) {
+      console.log('[exportLyricImage] single page, single image');
+      applyA4LineVisibility(node, null);
+      const raw = await captureA4Frame(node, tier, cw, ch);
+      const out = await applyWatermarkIfFree(raw, tier);
+      triggerDownload(out, fileName);
+      return;
+    }
+
+    // 多页：打包 ZIP
+    console.log('[exportLyricImage] >>> MULTI-PAGE, creating ZIP with', pages.length, 'pages');
+    const zipEntries: ZipStoreEntry[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      console.log('[exportLyricImage] capturing page', i + 1);
+      applyA4LineVisibility(node, pages[i]!);
+      await new Promise((r) => setTimeout(r, 50));
+      const raw = await captureA4Frame(node, tier, cw, ch);
+      const out = await applyWatermarkIfFree(raw, tier);
+      zipEntries.push({
+        name: `${stem}-第${String(i + 1).padStart(2, '0')}页.png`,
+        blob: await dataUrlToBlob(out),
+      });
+    }
+
+    console.log('[exportLyricImage] ZIP entries prepared, generating...');
+    const zipBlob = await zipBlobsStore(zipEntries);
+    console.log('[exportLyricImage] ZIP generated, triggering download:', `${stem}-a4.zip`);
+    triggerDownloadBlob(zipBlob, `${stem}-a4.zip`);
+  } catch (e) {
+    console.error('[exportLyricImage] ERROR:', e);
+    throw e;
+  } finally {
+    restoreExportStyles(node, backup);
+    console.log('[exportLyricImage] DONE');
   }
 }
 

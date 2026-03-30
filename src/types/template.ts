@@ -3,7 +3,7 @@
  */
 
 /** 输出比例预设 */
-export type AspectRatio = '1:1' | '3:4' | '9:16';
+export type AspectRatio = '1:1' | '3:4' | '9:16' | 'A4';
 
 /** 文字对齐方式（含竖排预留的右对齐） */
 export type TextAlign = 'left' | 'center' | 'right' | 'justify';
@@ -85,4 +85,6 @@ export const CANVAS_SIZE: Record<AspectRatio, { width: number; height: number }>
   '1:1': { width: 1080, height: 1080 },
   '3:4': { width: 1080, height: 1440 },
   '9:16': { width: 1080, height: 1920 },
+  /** A4 比例 (210mm x 297mm, 300dpi 约 2480 x 3508) */
+  'A4': { width: 2480, height: 3508 },
 };

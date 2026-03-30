@@ -46,3 +46,5 @@ pnpm start
 **2026-03-30（续）**：默认网易云数据源改为直连官网接口，避免已失效的第三方 Vercel 演示地址导致搜索 500；仍可通过 `NETEASE_API_URL` 使用自建代理。同日：搜索结果封面 URL 规范为 https，并放宽 `images.remotePatterns`，修复 `next/image` 报未配置主机名。
 
 **2026-03-30（续 2）**：本地 `pnpm dev` 时，编辑器「高清下载」弹窗内可「试跑高清导出」以验证付费档（无水印、高倍率）；`pnpm build` / 线上不包含该入口。
+
+**2026-03-30（续 3）**：输出比例为 A4 时，导出按单页高度对歌词块分页；超过一页时自动打包为 ZIP（每页一张 PNG），单页仍为单张 PNG。实现见 `src/lib/export.ts`、`src/lib/zip-store.ts`。
