@@ -34,8 +34,8 @@ const IS_DEV = process.env.NODE_ENV === 'development';
  * @param {ExportPanelProps} props - 组件属性
  */
 export function ExportPanel({ canvasRef }: ExportPanelProps) {
-  const { currentSong } = useSongStore();
-  const { aspectRatio } = useEditorStore();
+  const { currentSong, parsedLyric } = useSongStore();
+  const { aspectRatio, a4Layout } = useEditorStore();
   const [busy, setBusy] = useState(false);
   const [paidDialogOpen, setPaidDialogOpen] = useState(false);
 
@@ -57,7 +57,7 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     if (!node || !currentSong) return;
     setBusy(true);
     try {
-      await exportLyricImage(node, safeFileName(), 'free', aspectRatio);
+      await exportLyricImage(node, safeFileName(), 'free', aspectRatio, a4Layout, parsedLyric?.lines.length);
     } catch (e) {
       console.error(e);
       alert('导出失败，请重试或检查浏览器是否拦截下载');
@@ -74,7 +74,7 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     if (!node || !currentSong) return;
     setBusy(true);
     try {
-      await exportLyricImage(node, safeFileName('hd'), 'paid', aspectRatio);
+      await exportLyricImage(node, safeFileName('hd'), 'paid', aspectRatio, a4Layout, parsedLyric?.lines.length);
       setPaidDialogOpen(false);
     } catch (e) {
       console.error(e);

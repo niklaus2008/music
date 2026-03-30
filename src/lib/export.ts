@@ -11,6 +11,7 @@ import type { AspectRatio } from '@/types/template';
 import { CANVAS_SIZE } from '@/types/template';
 import { drawWatermark } from './watermark';
 import { zipBlobsStore, type ZipStoreEntry } from './zip-store';
+import type { A4LayoutOptions } from '@/store/editor-store';
 
 /** 导出质量等级 */
 export type ExportTier = 'free' | 'paid';
@@ -92,11 +93,13 @@ function measureBlockHeight(el: HTMLElement): number {
  * 按 A4 单页可用正文高度，将歌词行索引划分为多页
  * @param {HTMLElement} root - 画布根节点
  * @param {number} pageHeightPx - A4 逻辑高度（与 CANVAS_SIZE.A4.height 一致）
+ * @param {number} linesPerPage - 每页行数
  * @returns {Set<number>[]} 每页应显示的行索引集合（与 `data-line-index` 对应）
  */
 function buildA4PageIndexSets(
   root: HTMLElement,
-  pageHeightPx: number
+  pageHeightPx: number,
+  linesPerPage: number = 40
 ): Set<number>[] {
   const header = root.querySelector<HTMLElement>(SEL_EXPORT_HEADER);
   const footer = root.querySelector<HTMLElement>(SEL_EXPORT_FOOTER);
@@ -126,19 +129,16 @@ function buildA4PageIndexSets(
     return [];
   }
   
-  // 估算每行高度：基于 A4 字体大小 24px * 行高 1.6 ≈ 38px/行
-  // 3000 / 38 ≈ 79 行/页，但预览时字体被缩放，所以用保守估算
-  // 简单按 40 行/页估算，确保分页
-  const LINES_PER_PAGE = 40;
-  const totalPages = Math.ceil(lineEls.length / LINES_PER_PAGE);
+  // 根据用户选择的每页行数计算分页
+  const totalPages = Math.ceil(lineEls.length / linesPerPage);
   
-  console.log('[buildA4PageIndexSets] totalLines:', lineEls.length, 'LINES_PER_PAGE:', LINES_PER_PAGE, 'totalPages:', totalPages);
+  console.log('[buildA4PageIndexSets] totalLines:', lineEls.length, 'linesPerPage:', linesPerPage, 'totalPages:', totalPages);
   
   const pages: Set<number>[] = [];
   for (let page = 0; page < totalPages; page++) {
     const pageSet = new Set<number>();
-    const startIdx = page * LINES_PER_PAGE;
-    const endIdx = Math.min(startIdx + LINES_PER_PAGE, lineEls.length);
+    const startIdx = page * linesPerPage;
+    const endIdx = Math.min(startIdx + linesPerPage, lineEls.length);
     
     for (let i = startIdx; i < endIdx; i++) {
       const el = lineEls[i];
@@ -161,13 +161,20 @@ function applyA4LineVisibility(
   root: HTMLElement,
   shown: Set<number> | null
 ): void {
-  root.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE).forEach((el) => {
+  console.log('[applyA4LineVisibility] called with shown:', shown);
+  const allEls = root.querySelectorAll<HTMLElement>('[data-line-index]');
+  console.log('[applyA4LineVisibility] total elements found:', allEls.length);
+  
+  allEls.forEach((el) => {
+    const idx = parseInt(el.dataset.lineIndex ?? '-1', 10);
     if (shown === null) {
       el.style.display = '';
-      return;
+      console.log('[applyA4LineVisibility] showing all, reset index:', idx);
+    } else {
+      const shouldShow = shown.has(idx);
+      el.style.display = shouldShow ? '' : 'none';
+      if (shouldShow) console.log('[applyA4LineVisibility] showing index:', idx);
     }
-    const idx = parseInt(el.dataset.lineIndex ?? '-1', 10);
-    el.style.display = shown.has(idx) ? '' : 'none';
   });
 }
 
@@ -379,12 +386,15 @@ export async function exportImage(
  * @param {string} fileName - 单图时的文件名（须含 .png）；ZIP 时取其主文件名
  * @param {ExportTier} tier - 导出等级
  * @param {AspectRatio} aspectRatio - 当前输出比例
+ * @param {A4LayoutOptions} a4Layout - A4 排版选项
  */
 export async function exportLyricImage(
   node: HTMLElement,
   fileName: string,
   tier: ExportTier,
-  aspectRatio: AspectRatio
+  aspectRatio: AspectRatio,
+  a4Layout?: A4LayoutOptions,
+  totalLyricLines?: number
 ): Promise<void> {
   console.log('[exportLyricImage] START aspectRatio:', aspectRatio, 'fileName:', fileName);
   
@@ -398,67 +408,71 @@ export async function exportLyricImage(
   console.log('[exportLyricImage] A4 size:', cw, ch);
   const stem = fileName.replace(/\.png$/i, '');
   const backup = backupExportStyles(node);
+  
+  // 获取每页行数配置
+  const linesPerPage = a4Layout?.linesPerPage ?? 40;
+  console.log('[exportLyricImage] linesPerPage:', linesPerPage);
 
-  try {
-    applyA4LineVisibility(node, null);
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
+  // 使用传入的歌词总行数
+  const totalLines = totalLyricLines ?? node.querySelectorAll('[data-line-index]').length;
+  console.log('[exportLyricImage] totalLines:', totalLines);
 
-    const lineEls = node.querySelectorAll<HTMLElement>(SEL_EXPORT_LINE);
-    console.log('[exportLyricImage] lineEls count:', lineEls.length);
+  // 计算总页数（与预览保持一致）
+  const totalPages = totalLines > 0 ? Math.ceil(totalLines / linesPerPage) : 1;
+  console.log('[exportLyricImage] totalPages:', totalPages);
 
-    if (lineEls.length === 0) {
-      console.log('[exportLyricImage] no lines, single image');
-      prepareA4CaptureLayout(node, cw, ch);
-      const raw = await captureA4Frame(node, tier, cw, ch);
-      const out = await applyWatermarkIfFree(raw, tier);
-      triggerDownload(out, fileName);
-      return;
-    }
-
-    const pages = buildA4PageIndexSets(node, ch);
-    console.log('[exportLyricImage] pages count:', pages.length);
-
+  // 如果总页数 <= 1，直接导出单张图片
+  if (totalPages <= 1) {
+    console.log('[exportLyricImage] single page, single image');
     prepareA4CaptureLayout(node, cw, ch);
-
-    if (pages.length <= 1) {
-      console.log('[exportLyricImage] single page, single image');
-      applyA4LineVisibility(node, null);
-      const raw = await captureA4Frame(node, tier, cw, ch);
-      const out = await applyWatermarkIfFree(raw, tier);
-      triggerDownload(out, fileName);
-      return;
-    }
-
-    // 多页：打包 ZIP
-    console.log('[exportLyricImage] >>> MULTI-PAGE, creating ZIP with', pages.length, 'pages');
-    const zipEntries: ZipStoreEntry[] = [];
-    for (let i = 0; i < pages.length; i++) {
-      console.log('[exportLyricImage] capturing page', i + 1);
-      applyA4LineVisibility(node, pages[i]!);
-      await new Promise((r) => setTimeout(r, 50));
-      const raw = await captureA4Frame(node, tier, cw, ch);
-      const out = await applyWatermarkIfFree(raw, tier);
-      zipEntries.push({
-        name: `${stem}-第${String(i + 1).padStart(2, '0')}页.png`,
-        blob: await dataUrlToBlob(out),
-      });
-    }
-
-    console.log('[exportLyricImage] ZIP entries prepared, generating...');
-    const zipBlob = await zipBlobsStore(zipEntries);
-    console.log('[exportLyricImage] ZIP generated, triggering download:', `${stem}-a4.zip`);
-    triggerDownloadBlob(zipBlob, `${stem}-a4.zip`);
-  } catch (e) {
-    console.error('[exportLyricImage] ERROR:', e);
-    throw e;
-  } finally {
+    applyA4LineVisibility(node, null);
+    const raw = await captureA4Frame(node, tier, cw, ch);
+    const out = await applyWatermarkIfFree(raw, tier);
+    triggerDownload(out, fileName);
     restoreExportStyles(node, backup);
-    console.log('[exportLyricImage] DONE');
+    return;
   }
+
+  // 多页：打包 ZIP
+  console.log('[exportLyricImage] >>> MULTI-PAGE, creating ZIP with', totalPages, 'pages');
+  
+  prepareA4CaptureLayout(node, cw, ch);
+  
+  const zipEntries: ZipStoreEntry[] = [];
+  for (let i = 0; i < totalPages; i++) {
+    console.log('[exportLyricImage] capturing page', i + 1);
+    
+    // 计算当前页的行索引范围
+    const startIdx = i * linesPerPage;
+    const endIdx = Math.min(startIdx + linesPerPage, totalLines);
+    
+    // 创建当前页的行索引 Set
+    const pageSet = new Set<number>();
+    for (let idx = startIdx; idx < endIdx; idx++) {
+      pageSet.add(idx);
+    }
+    
+    console.log('[exportLyricImage] page', i + 1, 'showing indices:', startIdx, 'to', endIdx - 1);
+    applyA4LineVisibility(node, pageSet);
+    
+    // 等待 DOM 更新
+    await new Promise((r) => setTimeout(r, 200));
+    
+    const raw = await captureA4Frame(node, tier, cw, ch);
+    const out = await applyWatermarkIfFree(raw, tier);
+    zipEntries.push({
+      name: `${stem}-第${String(i + 1).padStart(2, '0')}页.png`,
+      blob: await dataUrlToBlob(out),
+    });
+  }
+
+  console.log('[exportLyricImage] ZIP entries prepared, generating...');
+  const zipBlob = await zipBlobsStore(zipEntries);
+  console.log('[exportLyricImage] ZIP generated, triggering download:', `${stem}-a4.zip`);
+  triggerDownloadBlob(zipBlob, `${stem}-a4.zip`);
+  
+  restoreExportStyles(node, backup);
+  console.log('[exportLyricImage] DONE');
 }
 
 /**

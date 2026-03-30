@@ -27,12 +27,45 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       contentMode,
       selectedLines,
       activeFont,
+      a4Layout,
     } = useEditorStore();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cw, height: ch } = CANVAS_SIZE[aspectRatio];
     const [previewScale, setPreviewScale] = useState(1);
+    const [activePage, setActivePage] = useState<number>(0);
     const isA4 = aspectRatio === 'A4';
+
+    // 计算 A4 分页
+    const totalLines = parsedLyric?.lines.length ?? 0;
+    const linesPerPage = a4Layout.linesPerPage;
+    const totalPages = isA4 && totalLines > 0 ? Math.ceil(totalLines / linesPerPage) : 1;
+
+    // A4 多页模式下始终显示所有行，通过 CSS 控制显示/隐藏
+    const isA4MultiPage = isA4 && totalPages > 1;
+
+    // 根据是否 A4 多页模式确定显示的歌词行
+    const displayLines = useMemo(() => {
+      if (!parsedLyric) return [];
+      // A4 多页模式下显示所有行
+      if (isA4MultiPage) {
+        if (contentMode === 'quote') {
+          const picked = parsedLyric.lines.filter(
+            (l) => !l.isBreak && selectedLines.has(l.index)
+          );
+          return picked.sort((a, b) => a.index - b.index);
+        }
+        return parsedLyric.lines;
+      }
+      // 非 A4 多页模式：使用原来的 bodyLines 逻辑
+      if (contentMode === 'quote') {
+        const picked = parsedLyric.lines.filter(
+          (l) => !l.isBreak && selectedLines.has(l.index)
+        );
+        return picked.sort((a, b) => a.index - b.index);
+      }
+      return parsedLyric.lines;
+    }, [parsedLyric, isA4MultiPage, contentMode, selectedLines]);
 
     useLayoutEffect(() => {
       const el = containerRef.current;
@@ -58,6 +91,15 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       ro.observe(el);
       return () => ro.disconnect();
     }, [cw, ch, isA4]);
+
+    // 监听页码切换事件
+    useEffect(() => {
+      const handler = (e: CustomEvent<{ page: number }>) => {
+        setActivePage(e.detail.page);
+      };
+      window.addEventListener('a4-page-change', handler as EventListener);
+      return () => window.removeEventListener('a4-page-change', handler as EventListener);
+    }, []);
 
     const metaLine = useMemo(() => {
       if (!currentSong) return '';
@@ -114,7 +156,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     }
 
     const emptyQuote =
-      contentMode === 'quote' && bodyLines.length === 0;
+      contentMode === 'quote' && displayLines.length === 0;
 
     /** 竖排容器主轴对齐（flex-row-reverse 下） */
     const verticalJustify: CSSProperties['justifyContent'] =
@@ -207,7 +249,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     color: template.typography.color,
                   }}
                 >
-                  {bodyLines.map((line) =>
+                  {displayLines.map((line) =>
                     line.isBreak ? (
                       <div
                         key={`brk-${line.index}`}
@@ -236,7 +278,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 </div>
               ) : contentMode === 'full' ? (
                 <div className="space-y-0" style={horizontalBodyStyle}>
-                  {bodyLines.map((line) =>
+                  {displayLines.map((line) =>
                     line.isBreak ? (
                       <div
                         key={`brk-${line.index}`}
@@ -258,7 +300,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 </div>
               ) : (
                 <div className="space-y-3" style={horizontalBodyStyle}>
-                  {bodyLines.map((line) => (
+                  {displayLines.map((line) => (
                     <p
                       key={line.index}
                       className="m-0"

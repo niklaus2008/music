@@ -23,12 +23,14 @@ import {
 import { LyricCanvas } from '@/components/editor/LyricCanvas';
 import { EditorControlsPanel } from '@/components/editor/EditorControlsPanel';
 import { useSongStore } from '@/store/song-store';
+import { useEditorStore } from '@/store/editor-store';
 
 export default function EditorPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const { currentSong, parsedLyric, loadingLyric, lyricError } = useSongStore();
+  const { aspectRatio, a4Layout } = useEditorStore();
 
   useEffect(() => {
     if (!currentSong) {
@@ -74,7 +76,33 @@ export default function EditorPage() {
       {/* 画布预览 */}
       <section className="order-1 min-w-0 flex-1 md:order-2">
         <div className="sticky top-4 rounded-xl border bg-card p-3 shadow-sm">
-          <p className="mb-3 text-center text-xs text-muted-foreground">
+          {/* A4 多页模式：显示页码切换 tabs */}
+          {aspectRatio === 'A4' && parsedLyric && parsedLyric.lines.length > a4Layout.linesPerPage && (
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-1">
+              {Array.from({ length: Math.ceil(parsedLyric.lines.length / a4Layout.linesPerPage) }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={cn(
+                    'rounded px-2 py-1 text-xs transition-colors',
+                    'border border-border hover:bg-muted',
+                    // 使用 CSS 变量控制 active 状态，需要通过内联 style 或 class 传递
+                  )}
+                  style={{
+                    backgroundColor: i === 0 ? 'var(--primary)' : 'transparent',
+                    color: i === 0 ? 'white' : 'inherit',
+                  }}
+                  onClick={() => {
+                    // 通过 URL hash 或其他方式通知 LyricCanvas 切换页码
+                    window.dispatchEvent(new CustomEvent('a4-page-change', { detail: { page: i } }));
+                  }}
+                >
+                  第 {i + 1} 页
+                </button>
+              ))}
+            </div>
+          )}
+          <p className={aspectRatio === 'A4' ? 'mb-3 text-center text-xs text-muted-foreground' : 'mb-3 text-center text-xs text-muted-foreground'}>
             实时预览 · 导出尺寸与下方画布一致
           </p>
           {loadingLyric ? (

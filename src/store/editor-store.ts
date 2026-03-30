@@ -7,6 +7,20 @@ import { create } from 'zustand';
 import type { Template, AspectRatio, ContentMode } from '@/types/template';
 import { templates } from '@/lib/templates';
 
+/** A4 排版选项 */
+export interface A4LayoutOptions {
+  /** 每页行数 */
+  linesPerPage: 30 | 40 | 50 | 60;
+  /** 排版方向 */
+  direction: 'horizontal' | 'vertical';
+  /** 边距预设 */
+  margin: 'compact' | 'standard' | 'relaxed';
+  /** 显示页眉 */
+  showHeader: boolean;
+  /** 显示页脚 */
+  showFooter: boolean;
+}
+
 interface EditorState {
   /** 当前模板 */
   template: Template;
@@ -18,6 +32,8 @@ interface EditorState {
   selectedLines: Set<number>;
   /** 当前选中的正文字体 */
   activeFont: string;
+  /** A4 排版选项 */
+  a4Layout: A4LayoutOptions;
 
   setTemplate: (t: Template) => void;
   setAspectRatio: (r: AspectRatio) => void;
@@ -26,7 +42,16 @@ interface EditorState {
   selectAllLines: (indices: number[]) => void;
   clearLines: () => void;
   setActiveFont: (font: string) => void;
+  setA4Layout: (options: Partial<A4LayoutOptions>) => void;
 }
+
+const defaultA4Layout: A4LayoutOptions = {
+  linesPerPage: 40,
+  direction: 'horizontal',
+  margin: 'standard',
+  showHeader: true,
+  showFooter: true,
+};
 
 export const useEditorStore = create<EditorState>((set) => ({
   template: templates[0],
@@ -34,6 +59,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   contentMode: 'full',
   selectedLines: new Set<number>(),
   activeFont: templates[0].typography.bodyFont,
+  a4Layout: defaultA4Layout,
 
   setTemplate: (t) =>
     set({ template: t, activeFont: t.typography.bodyFont }),
@@ -59,4 +85,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   clearLines: () => set({ selectedLines: new Set() }),
 
   setActiveFont: (font) => set({ activeFont: font }),
+
+  setA4Layout: (options) =>
+    set((state) => ({ a4Layout: { ...state.a4Layout, ...options } })),
 }));
