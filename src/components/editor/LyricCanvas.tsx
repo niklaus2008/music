@@ -80,6 +80,19 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
 
     const titleFont = template.typography.titleFont;
     const textAlign = template.typography.textAlign;
+    const isVertical = template.layout.direction === 'vertical';
+
+    /** 横排正文通用样式 */
+    const horizontalBodyStyle: CSSProperties = {
+      fontFamily: activeFont,
+      fontSize: template.typography.fontSize,
+      lineHeight: template.typography.lineHeight,
+      letterSpacing: `${template.typography.letterSpacing}em`,
+      color: template.typography.color,
+      textAlign,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    };
 
     if (!currentSong || !parsedLyric) {
       return (
@@ -92,8 +105,16 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const emptyQuote =
       contentMode === 'quote' && bodyLines.length === 0;
 
+    /** 竖排容器主轴对齐（flex-row-reverse 下） */
+    const verticalJustify: CSSProperties['justifyContent'] =
+      textAlign === 'center'
+        ? 'center'
+        : textAlign === 'right'
+          ? 'flex-start'
+          : 'flex-end';
+
     return (
-    <div ref={containerRef} className="w-full max-w-full overflow-hidden">
+      <div ref={containerRef} className="w-full max-w-full overflow-hidden">
       <div
         className="mx-auto flex justify-center"
         style={{
@@ -157,24 +178,45 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     fontFamily: activeFont,
                     fontSize: template.typography.fontSize - 2,
                     color: template.typography.metaColor,
+                    writingMode: isVertical ? 'horizontal-tb' : undefined,
                   }}
                 >
                   金句模式：请在左侧勾选要展示的歌词行
                 </div>
-              ) : contentMode === 'full' ? (
+              ) : isVertical ? (
                 <div
-                  className="space-y-0"
+                  className="flex h-full max-h-full flex-row-reverse flex-wrap content-start items-start justify-center gap-x-3 gap-y-1 overflow-hidden"
                   style={{
                     fontFamily: activeFont,
                     fontSize: template.typography.fontSize,
-                    lineHeight: template.typography.lineHeight,
-                    letterSpacing: `${template.typography.letterSpacing}em`,
                     color: template.typography.color,
-                    textAlign,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
                   }}
                 >
+                  {bodyLines.map((line) =>
+                    line.isBreak ? (
+                      <div
+                        key={`brk-${line.index}`}
+                        className="h-4 w-full shrink-0 basis-full"
+                        aria-hidden
+                      />
+                    ) : (
+                      <div
+                        key={line.index}
+                        className="max-h-full shrink-0"
+                        style={{
+                          writingMode: 'vertical-rl',
+                          textOrientation: 'mixed',
+                          lineHeight: template.typography.lineHeight,
+                          letterSpacing: `${template.typography.letterSpacing}em`,
+                        }}
+                      >
+                        {line.text}
+                      </div>
+                    )
+                  )}
+                </div>
+              ) : contentMode === 'full' ? (
+                <div className="space-y-0" style={horizontalBodyStyle}>
                   {bodyLines.map((line) =>
                     line.isBreak ? (
                       <div key={`brk-${line.index}`} className="h-4" />
@@ -186,19 +228,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                   )}
                 </div>
               ) : (
-                <div
-                  className="space-y-3"
-                  style={{
-                    fontFamily: activeFont,
-                    fontSize: template.typography.fontSize,
-                    lineHeight: template.typography.lineHeight,
-                    letterSpacing: `${template.typography.letterSpacing}em`,
-                    color: template.typography.color,
-                    textAlign,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
+                <div className="space-y-3" style={horizontalBodyStyle}>
                   {bodyLines.map((line) => (
                     <p key={line.index} className="m-0">
                       {line.text}
@@ -208,7 +238,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
               )}
             </div>
 
-            <footer className="mt-auto shrink-0 pt-8">
+            <footer className="mt-auto shrink-0 space-y-2 pt-8">
               <p
                 className="opacity-90"
                 style={{
@@ -220,6 +250,18 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
               >
                 《{currentSong.name}》 · {currentSong.artists.map((a) => a.name).join(' / ')}
                 {currentSong.album.name ? ` · ${currentSong.album.name}` : ''}
+              </p>
+              <p
+                className="opacity-75"
+                style={{
+                  fontFamily: activeFont,
+                  fontSize: Math.max(10, template.copyright.fontSize - 2),
+                  color: template.copyright.color,
+                  textAlign,
+                  lineHeight: 1.45,
+                }}
+              >
+                歌词仅供个人学习与非商业使用 · 数据检索来源：网易云音乐
               </p>
             </footer>
           </div>

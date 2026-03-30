@@ -5,8 +5,8 @@
 /** 输出比例预设 */
 export type AspectRatio = '1:1' | '3:4' | '9:16';
 
-/** 文字对齐方式 */
-export type TextAlign = 'left' | 'center' | 'justify';
+/** 文字对齐方式（含竖排预留的右对齐） */
+export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 
 /** 排版方向 */
 export type LayoutDirection = 'horizontal' | 'vertical';

@@ -32,7 +32,7 @@ export function SearchBar() {
   }, [value, search]);
 
   return (
-    <div className={cn('mx-auto w-full max-w-2xl px-4 md:px-0')}>
+    <div className={cn('w-full')}>
       <div
         className={cn(
           'flex w-full items-stretch gap-2 rounded-2xl border border-border/80 bg-background/80 p-1.5 shadow-sm',

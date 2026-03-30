@@ -25,7 +25,8 @@ export const chineseClassicTemplate: Template = {
   },
   layout: {
     padding: [100, 70, 100, 70],
-    direction: 'horizontal',
+    /** 竖排：从右至左逐列展示歌词 */
+    direction: 'vertical',
   },
   copyright: {
     fontSize: 11,

@@ -1,6 +1,7 @@
 /**
  * @fileoverview 图片导出引擎
  * 使用 html-to-image 将画布 DOM 节点转换为高清位图。
+ * 画布逻辑尺寸见 `src/types/template.ts` 中的 `CANVAS_SIZE`；本模块用 `pixelRatio` 与倍率表控制导出清晰度。
  * 免费版：1× 像素密度 + 水印；付费版：3× 像素密度 + 无水印。
  */
 
@@ -10,7 +11,10 @@ import { drawWatermark } from './watermark';
 /** 导出质量等级 */
 export type ExportTier = 'free' | 'paid';
 
-/** 各等级的像素倍率 */
+/**
+ * 各等级的像素倍率（相对画布基准 CSS 像素）。
+ * 与 `CANVAS_SIZE` 相乘得到最终位图边长（近似）。
+ */
 const SCALE_MAP: Record<ExportTier, number> = {
   free: 1,
   paid: 3,
@@ -33,6 +37,12 @@ export async function exportImage(
     pixelRatio: scale,
     cacheBust: true,
     skipAutoScale: true,
+    /** 优先嵌入 woff2，减少跨域字体抓取失败 */
+    preferredFontFormat: 'woff2',
+    fetchRequestInit: {
+      mode: 'cors',
+      credentials: 'omit',
+    },
   });
 
   if (tier === 'free') {

@@ -24,6 +24,11 @@ interface ExportPanelProps {
 }
 
 /**
+ * 是否为开发环境（构建时内联，用于试跑付费档导出）
+ */
+const IS_DEV = process.env.NODE_ENV === 'development';
+
+/**
  * 导出面板：免费 / 高清下载
  * @param {ExportPanelProps} props - 组件属性
  */
@@ -34,11 +39,12 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
 
   /**
    * 生成安全文件名
+   * @param {'hd' | undefined} variant - `hd` 时用于区分试跑高清文件
    */
-  const safeFileName = () => {
+  const safeFileName = (variant?: 'hd') => {
     const base = currentSong?.name ?? 'lyric';
     const cleaned = base.replace(/[/\\?%*:|"<>]/g, '-');
-    return `${cleaned}-lyric.png`;
+    return variant === 'hd' ? `${cleaned}-lyric-hd.png` : `${cleaned}-lyric.png`;
   };
 
   /**
@@ -53,6 +59,24 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     } catch (e) {
       console.error(e);
       alert('导出失败，请重试或检查浏览器是否拦截下载');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * 开发环境：试跑付费档（3× 像素、无水印），不含真实支付
+   */
+  const handleDevPaidExport = async () => {
+    const node = canvasRef.current;
+    if (!node || !currentSong) return;
+    setBusy(true);
+    try {
+      await exportImage(node, safeFileName('hd'), 'paid');
+      setPaidDialogOpen(false);
+    } catch (e) {
+      console.error(e);
+      alert('高清导出失败，请重试或检查浏览器是否拦截下载');
     } finally {
       setBusy(false);
     }
@@ -90,6 +114,26 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
               当前可先使用「免费下载」预览效果。
             </DialogDescription>
           </DialogHeader>
+          {IS_DEV && (
+            <div className="space-y-2 border-t border-border/60 pt-4">
+              <p className="text-xs text-muted-foreground">
+                开发模式：可试跑付费档导出（约 3× 像素密度、无水印），文件名带{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-[0.7rem]">
+                  -lyric-hd
+                </code>
+                。
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                disabled={busy || !currentSong}
+                onClick={() => void handleDevPaidExport()}
+              >
+                {busy ? '导出中…' : '试跑高清导出（开发）'}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

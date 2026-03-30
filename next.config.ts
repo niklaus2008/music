@@ -11,12 +11,19 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      // 封面：优先在 `netease.ts` 中规范为 https；此处同时允许 http 以防遗漏
       { protocol: "https", hostname: "p1.music.126.net", pathname: "/**" },
       { protocol: "https", hostname: "p2.music.126.net", pathname: "/**" },
       { protocol: "https", hostname: "p3.music.126.net", pathname: "/**" },
       { protocol: "https", hostname: "p4.music.126.net", pathname: "/**" },
       { protocol: "https", hostname: "p5.music.126.net", pathname: "/**" },
       { protocol: "https", hostname: "p6.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p1.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p2.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p3.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p4.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p5.music.126.net", pathname: "/**" },
+      { protocol: "http", hostname: "p6.music.126.net", pathname: "/**" },
     ],
   },
 };

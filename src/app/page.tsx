@@ -10,22 +10,24 @@ import { SearchResults } from '@/components/search/SearchResults';
 
 export default function HomePage() {
   return (
-    <main className="flex flex-1 flex-col items-center px-4 py-12 md:py-24">
-      {/* 品牌区 */}
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-          Lyric<span className="text-primary/70">Canvas</span>
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          歌词美学重塑 · 一键生成精美歌词卡片
-        </p>
+    <main className="flex flex-1 flex-col items-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] sm:py-12 md:py-24">
+      <div className="flex w-full max-w-2xl flex-col items-stretch">
+        {/* 品牌区 */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Lyric<span className="text-primary/70">Canvas</span>
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            歌词美学重塑 · 一键生成精美歌词卡片
+          </p>
+        </div>
+
+        {/* 搜索 */}
+        <SearchBar />
+
+        {/* 结果与空状态 */}
+        <SearchResults />
       </div>
-
-      {/* 搜索 */}
-      <SearchBar />
-
-      {/* 结果 */}
-      <SearchResults />
     </main>
   );
 }
