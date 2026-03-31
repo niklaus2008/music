@@ -7,6 +7,7 @@
 
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
   Select,
   SelectContent,
@@ -29,12 +30,6 @@ const LINES_PER_PAGE_OPTIONS: { value: A4LayoutOptions['linesPerPage']; label: s
   { value: 60, label: '60行/页' },
 ];
 
-const MARGIN_OPTIONS: { value: A4LayoutOptions['margin']; label: string }[] = [
-  { value: 'compact', label: '紧凑' },
-  { value: 'standard', label: '标准' },
-  { value: 'relaxed', label: '宽松' },
-];
-
 /** 样式控制面板 */
 export function EditorStylePanel() {
   const {
@@ -44,6 +39,8 @@ export function EditorStylePanel() {
     setContentMode,
     activeFont,
     setActiveFont,
+    fontSize,
+    setFontSize,
     a4Layout,
     setA4Layout,
   } = useEditorStore();
@@ -107,69 +104,23 @@ export function EditorStylePanel() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">排版方向</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={a4Layout.direction === 'horizontal' ? 'default' : 'outline'}
-                className="w-full"
-                onClick={() => setA4Layout({ direction: 'horizontal' })}
-              >
-                横排
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={a4Layout.direction === 'vertical' ? 'default' : 'outline'}
-                className="w-full"
-                onClick={() => setA4Layout({ direction: 'vertical' })}
-              >
-                竖排
-              </Button>
-            </div>
+            <Label className="text-xs text-muted-foreground">
+              边距: {a4Layout.margin}px
+            </Label>
+            <Slider
+              value={[a4Layout.margin]}
+              onValueChange={(val) => {
+                const arr = val as number[];
+                setA4Layout({ margin: arr[0] });
+              }}
+              min={20}
+              max={160}
+              step={10}
+              className="w-full"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">边距预设</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {MARGIN_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.value}
-                  type="button"
-                  size="sm"
-                  variant={a4Layout.margin === opt.value ? 'default' : 'outline'}
-                  className="w-full"
-                  onClick={() => setA4Layout({ margin: opt.value })}
-                >
-                  {opt.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">页眉/页脚</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={a4Layout.showHeader ? 'default' : 'outline'}
-                className="w-full"
-                onClick={() => setA4Layout({ showHeader: !a4Layout.showHeader })}
-              >
-                {a4Layout.showHeader ? '✓ 页眉' : '✗ 页眉'}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={a4Layout.showFooter ? 'default' : 'outline'}
-                className="w-full"
-                onClick={() => setA4Layout({ showFooter: !a4Layout.showFooter })}
-              >
-                {a4Layout.showFooter ? '✓ 页脚' : '✗ 页脚'}
-              </Button>
-            </div>
           </div>
         </>
       )}
@@ -195,6 +146,23 @@ export function EditorStylePanel() {
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">
+          字体大小: {fontSize}px
+        </Label>
+        <Slider
+          value={[fontSize]}
+          onValueChange={(val) => {
+            const arr = val as number[];
+            setFontSize(arr[0]);
+          }}
+          min={12}
+          max={48}
+          step={2}
+          className="w-full"
+        />
       </div>
 
       <div className="space-y-2">

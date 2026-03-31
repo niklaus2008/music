@@ -7,12 +7,14 @@ import type { Template } from '@/types/template';
 import { xiaohongshuTemplate } from './xiaohongshu';
 import { japaneseTemplate } from './japanese';
 import { chineseClassicTemplate } from './chinese-classic';
+import { pinkTemplate } from './pink';
 
 /** 所有内置模板（顺序即为 UI 中的展示顺序） */
 export const templates: Template[] = [
   xiaohongshuTemplate,
   japaneseTemplate,
   chineseClassicTemplate,
+  pinkTemplate,
 ];
 
 /** 字体定义：id → CSS font-family + 展示名 */

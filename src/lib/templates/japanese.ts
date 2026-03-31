@@ -7,7 +7,7 @@ import type { Template } from '@/types/template';
 
 export const japaneseTemplate: Template = {
   id: 'japanese',
-  name: '日系手写',
+  name: '手写',
   preview: '/templates/japanese.png',
   background: {
     type: 'solid',

@@ -27,6 +27,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       contentMode,
       selectedLines,
       activeFont,
+      fontSize,
       a4Layout,
     } = useEditorStore();
 
@@ -42,8 +43,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const totalPages = isA4 && totalLines > 0 ? Math.ceil(totalLines / linesPerPage) : 1;
 
     // A4 边距映射
-    const marginMap = { compact: 40, standard: 80, relaxed: 120 };
-    const marginSize = marginMap[a4Layout.margin];
+    const marginSize = a4Layout.margin;
     
     // A4 多页模式
     const isA4MultiPage = isA4 && totalPages > 1;
@@ -166,11 +166,12 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const titleFont = template.typography.titleFont;
     const textAlign = template.typography.textAlign;
     const isVertical = template.layout.direction === 'vertical';
+    const bodyFontSize = fontSize || template.typography.fontSize;
 
     /** 横排正文通用样式 */
     const horizontalBodyStyle: CSSProperties = {
       fontFamily: activeFont,
-      fontSize: template.typography.fontSize,
+      fontSize: bodyFontSize,
       lineHeight: template.typography.lineHeight,
       letterSpacing: `${template.typography.letterSpacing}em`,
       color: template.typography.color,
@@ -230,7 +231,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 className="font-semibold leading-tight"
                 style={{
                   fontFamily: titleFont,
-                  fontSize: template.typography.fontSize + 8,
+                  fontSize: bodyFontSize + 8,
                   color: template.typography.color,
                   textAlign,
                 }}
@@ -241,7 +242,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                 className="leading-relaxed opacity-90"
                 style={{
                   fontFamily: activeFont,
-                  fontSize: Math.round(template.typography.fontSize * 0.55),
+                  fontSize: Math.round(bodyFontSize * 0.55),
                   color: template.typography.metaColor,
                   textAlign,
                 }}
@@ -265,7 +266,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                   className="flex h-full min-h-[200px] items-center justify-center px-6 text-center opacity-70"
                   style={{
                     fontFamily: activeFont,
-                    fontSize: template.typography.fontSize - 2,
+                    fontSize: bodyFontSize - 2,
                     color: template.typography.metaColor,
                     writingMode: isVertical ? 'horizontal-tb' : undefined,
                   }}
