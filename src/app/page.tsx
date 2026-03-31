@@ -18,7 +18,7 @@ export default function HomePage() {
         {/* 品牌区 */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Lyric<span className="text-primary/70">Canvas</span>
+            歌词<span className="text-primary/70">广场</span>
           </h1>
           <p className="mt-2 text-muted-foreground">
             歌词美学重塑 · 一键生成精美歌词卡片
