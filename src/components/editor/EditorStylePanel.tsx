@@ -30,6 +30,35 @@ const LINES_PER_PAGE_OPTIONS: { value: A4LayoutOptions['linesPerPage']; label: s
   { value: 60, label: '60行/页' },
 ];
 
+/** SegmentedControl 风格的内容模式切换 */
+function ContentModeSwitch({
+  value,
+  onChange,
+}: {
+  value: ContentMode;
+  onChange: (v: ContentMode) => void;
+}) {
+  return (
+    <div className="flex rounded-lg border border-input bg-transparent p-0.5">
+      {(['full', 'quote'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={cn(
+            'flex-1 rounded-md py-1.5 text-sm font-medium transition-all',
+            value === v
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {v === 'full' ? '全文' : '金句'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** 样式控制面板 */
 export function EditorStylePanel() {
   const {
@@ -52,6 +81,7 @@ export function EditorStylePanel() {
 
   return (
     <div className="space-y-5">
+      {/* 输出比例 */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">输出比例</Label>
         <div className="grid grid-cols-4 gap-2">
@@ -60,8 +90,12 @@ export function EditorStylePanel() {
               key={r}
               type="button"
               size="sm"
-              variant={aspectRatio === r ? 'default' : 'outline'}
-              className="w-full"
+              className={cn(
+                'w-full font-medium',
+                aspectRatio === r
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              )}
               onClick={() => setAspectRatio(r)}
             >
               {r}
@@ -104,9 +138,10 @@ export function EditorStylePanel() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">
-              边距: {a4Layout.margin}px
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">边距</Label>
+              <span className="text-xs font-medium">{a4Layout.margin}px</span>
+            </div>
             <Slider
               value={[a4Layout.margin]}
               onValueChange={(val) => {
@@ -116,42 +151,24 @@ export function EditorStylePanel() {
               min={20}
               max={160}
               step={10}
-              className="w-full"
+              className="py-1"
             />
-          </div>
-
-          <div className="space-y-2">
           </div>
         </>
       )}
 
+      {/* 内容模式 - SegmentedControl */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">内容模式</Label>
-        <div className={cn('grid grid-cols-2 gap-2')}>
-          {(
-            [
-              { id: 'full' as const, label: '全文' },
-              { id: 'quote' as const, label: '金句' },
-            ] as const
-          ).map(({ id, label }) => (
-            <Button
-              key={id}
-              type="button"
-              size="sm"
-              variant={contentMode === id ? 'default' : 'outline'}
-              className="w-full"
-              onClick={() => setContentMode(id as ContentMode)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+        <ContentModeSwitch value={contentMode} onChange={setContentMode} />
       </div>
 
+      {/* 字体大小 */}
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">
-          字体大小: {fontSize}px
-        </Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">字体大小</Label>
+          <span className="text-xs font-medium">{fontSize}px</span>
+        </div>
         <Slider
           value={[fontSize]}
           onValueChange={(val) => {
@@ -161,10 +178,11 @@ export function EditorStylePanel() {
           min={12}
           max={48}
           step={2}
-          className="w-full"
+          className="py-1"
         />
       </div>
 
+      {/* 字体选择 */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">正文字体</Label>
         <Select

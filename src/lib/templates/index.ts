@@ -8,6 +8,11 @@ import { xiaohongshuTemplate } from './xiaohongshu';
 import { japaneseTemplate } from './japanese';
 import { chineseClassicTemplate } from './chinese-classic';
 import { pinkTemplate } from './pink';
+import { appleMusicTemplate } from './apple-music';
+import { handwrittenTemplate } from './handwritten';
+import { minimalistTemplate } from './minimalist';
+import { squareTemplate } from './square';
+import { posterTemplate } from './poster';
 
 /** 所有内置模板（顺序即为 UI 中的展示顺序） */
 export const templates: Template[] = [
@@ -15,6 +20,11 @@ export const templates: Template[] = [
   japaneseTemplate,
   chineseClassicTemplate,
   pinkTemplate,
+  appleMusicTemplate,
+  handwrittenTemplate,
+  minimalistTemplate,
+  squareTemplate,
+  posterTemplate,
 ];
 
 /** 字体定义：id → CSS font-family + 展示名 */
@@ -28,6 +38,7 @@ export interface FontOption {
 export const fontOptions: FontOption[] = [
   { id: 'noto-sans', label: '思源黑体', family: '"Noto Sans SC", sans-serif' },
   { id: 'smiley-sans', label: '得意黑', family: '"SmileySans", sans-serif' },
-  { id: 'lxgw-wenkai', label: '霞鹜文楷', family: '"LXGW WenKai", serif' },
+  { id: 'lxgw-wenkai', label: '霞鹜文楷', family: '"ZCOOL KuaiLe", "Noto Sans SC", sans-serif' },
   { id: 'noto-serif', label: '思源宋体', family: '"Noto Serif SC", serif' },
+  { id: 'zcool-kuaile', label: '站酷快乐体', family: '"ZCOOL KuaiLe", cursive' },
 ];

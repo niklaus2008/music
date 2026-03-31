@@ -98,10 +98,11 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-3">
         <Button
           type="button"
-          className="flex-1 gap-2"
+          size="lg"
+          className="w-full gap-2"
           disabled={busy || !currentSong}
           onClick={handleFree}
         >
@@ -114,8 +115,9 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
         </Button>
         <Button
           type="button"
-          variant="secondary"
-          className="flex-1"
+          size="lg"
+          variant="outline"
+          className="w-full"
           disabled={!currentSong}
           onClick={() => setPaidDialogOpen(true)}
         >

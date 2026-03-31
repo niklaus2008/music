@@ -107,7 +107,7 @@ export default function EditorPage() {
               ))}
             </div>
           )}
-          <p className={aspectRatio === 'A4' ? 'mb-3 text-center text-xs text-muted-foreground' : 'mb-3 text-center text-xs text-muted-foreground'}>
+          <p className="mb-3 text-center text-xs text-muted-foreground/60">
             实时预览 · 导出尺寸与下方画布一致
           </p>
           {loadingLyric ? (

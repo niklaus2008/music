@@ -35,6 +35,22 @@ function normalizePicUrl(url: string | undefined): string {
   return url;
 }
 
+/** 排名样式 */
+function RankBadge({ rank }: { rank: number }) {
+  const rankClasses: Record<number, string> = {
+    1: 'text-amber-500 font-bold text-lg',
+    2: 'text-slate-400 font-bold text-lg',
+    3: 'text-amber-700 font-bold text-lg',
+  };
+  const baseClass = rank <= 3 ? rankClasses[rank] : 'text-muted-foreground text-sm';
+
+  return (
+    <span className={`w-6 text-center ${baseClass}`}>
+      {rank}
+    </span>
+  );
+}
+
 export function ChartList() {
   const router = useRouter();
   const [activeChart, setActiveChart] = useState('rise');
@@ -60,14 +76,7 @@ export function ChartList() {
   }, [activeChart]);
 
   const handleClick = async (track: ChartTrack) => {
-    // 构造 SearchResult 并选择歌曲
-    const song: {
-      id: string;
-      name: string;
-      artists: { id: string; name: string }[];
-      album: { id: string; name: string; coverUrl: string };
-      duration: number;
-    } = {
+    const song = {
       id: String(track.id),
       name: track.name,
       artists: track.artists.map((a) => ({ id: String(a.name), name: a.name })),
@@ -87,15 +96,15 @@ export function ChartList() {
   return (
     <div>
       {/* 榜单 Tab */}
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
+      <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
         {CHARTS.map((chart) => (
           <button
             key={chart.id}
             onClick={() => setActiveChart(chart.id)}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm transition-colors ${
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
               activeChart === chart.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                ? 'bg-foreground text-background shadow-sm'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
             }`}
           >
             {chart.name}
@@ -107,33 +116,27 @@ export function ChartList() {
       {loading ? (
         <div className="py-8 text-center text-muted-foreground">加载中...</div>
       ) : (
-        <div className="space-y-1">
+        <div className="-mx-2">
           {/* 标题 */}
-          <h3 className="mb-3 text-lg font-semibold">{chartName}</h3>
-          
+          <h3 className="mb-2 px-2 text-base font-semibold">{chartName}</h3>
+
           {/* 歌曲列表 */}
           {tracks.map((track, idx) => (
             <button
               key={track.id}
               onClick={() => handleClick(track)}
-              className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-muted/50"
+              className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 active:bg-muted"
             >
               {/* 排名 */}
-              <span
-                className={`w-6 text-center text-sm font-medium ${
-                  idx < 3 ? 'text-primary' : 'text-muted-foreground'
-                }`}
-              >
-                {idx + 1}
-              </span>
-              
+              <RankBadge rank={idx + 1} />
+
               {/* 封面 */}
               <img
                 src={normalizePicUrl(track.album?.picUrl)}
                 alt=""
-                className="h-10 w-10 shrink-0 rounded object-cover"
+                className="h-12 w-12 shrink-0 rounded-lg shadow-sm object-cover"
               />
-              
+
               {/* 歌名/歌手 */}
               <div className="min-w-0 flex-1 overflow-hidden">
                 <div className="truncate text-sm font-medium">{track.name}</div>

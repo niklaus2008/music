@@ -22,6 +22,10 @@ interface Track {
   album: { name: string; picUrl: string };
 }
 
+/** 缓存 */
+const cache: Map<string, { data: Track[]; timestamp: number }> = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 分钟缓存
+
 /**
  * 请求网易云榜单
  */
@@ -43,12 +47,35 @@ async function fetchChart(listId: number): Promise<Track[]> {
 export async function GET(req: NextRequest) {
   const list = req.nextUrl.searchParams.get('list') || 'rise';
   const listId = CHARTS[list as keyof typeof CHARTS] || CHARTS.rise;
+  const cacheKey = list;
+
+  // 检查缓存
+  const cached = cache.get(cacheKey);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    return NextResponse.json({ data: cached.data, list: { id: list, listId }, cached: true });
+  }
 
   try {
     const tracks = await fetchChart(listId);
-    return NextResponse.json({ data: tracks, list: { id: list, listId } });
+    
+    // 更新缓存
+    cache.set(cacheKey, { data: tracks, timestamp: now });
+    
+    return NextResponse.json({ data: tracks, list: { id: list, listId }, cached: false });
   } catch (err) {
     console.error('[API /charts]', err);
+    
+    // 缓存过期时返回旧数据
+    if (cached) {
+      return NextResponse.json({ 
+        data: cached.data, 
+        list: { id: list, listId }, 
+        cached: true,
+        error: '使用缓存数据' 
+      });
+    }
+    
     return NextResponse.json({ error: '获取榜单失败' }, { status: 500 });
   }
 }
