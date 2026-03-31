@@ -41,7 +41,7 @@ export function SearchBar() {
       >
         <div className="relative flex min-w-0 flex-1 items-center">
           <Search
-            className="pointer-events-none absolute left-3 size-5 text-muted-foreground"
+            className="pointer-events-none absolute left-3 size-5 text-muted-foreground/70"
             aria-hidden
           />
           <Input
@@ -62,6 +62,7 @@ export function SearchBar() {
             aria-label="搜索歌曲"
           />
         </div>
+        <div className="w-px bg-border/50" />
         <Button
           type="button"
           size="lg"

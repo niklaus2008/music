@@ -5,6 +5,7 @@
 
 'use client';
 
+import { Music } from 'lucide-react';
 import { useSongStore } from '@/store/song-store';
 import { SongCard } from './SongCard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,22 +14,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 function SearchEmptyHints() {
   return (
     <div
-      className="mt-10 w-full rounded-2xl border border-border/60 bg-muted/30 px-4 py-6 text-center sm:px-6"
+      className="mt-6 w-full rounded-2xl border border-border/60 bg-muted/30 px-6 py-8 text-center"
       aria-live="polite"
     >
-      <p className="text-sm font-medium text-foreground">开始搜索</p>
+      <Music className="mx-auto h-12 w-12 text-muted-foreground/40" />
+      <p className="mt-4 text-base font-medium text-foreground">开始搜索</p>
       <p className="mt-2 text-sm text-muted-foreground">
         输入歌名、歌手或专辑，从结果中选一首进入排版编辑器。
       </p>
       <ul className="mt-4 list-none space-y-2 text-left text-xs text-muted-foreground sm:text-sm">
         <li className="flex gap-2">
-          <span className="text-primary" aria-hidden>
+          <span className="text-pink-500" aria-hidden>
             ·
           </span>
           <span>支持模糊匹配，结果来自公开检索接口</span>
         </li>
         <li className="flex gap-2">
-          <span className="text-primary" aria-hidden>
+          <span className="text-pink-500" aria-hidden>
             ·
           </span>
           <span>手机与桌面均可使用，画布会随屏幕宽度缩放预览</span>
