@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, SlidersHorizontal, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -30,6 +30,7 @@ export default function EditorPage() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [activeA4Page, setActiveA4Page] = useState(0);
+  const [previewScale, setPreviewScale] = useState(1);
   const { currentSong, parsedLyric, loadingLyric, lyricError } = useSongStore();
   const { aspectRatio, a4Layout } = useEditorStore();
 
@@ -54,12 +55,12 @@ export default function EditorPage() {
   return (
     <main
       className={cn(
-        'mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pt-[max(1.5rem,env(safe-area-inset-top))]',
-        'pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:flex-row md:pb-10 md:pt-10'
+        'mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-3 pt-3 md:flex-row md:gap-6 md:px-4 md:pt-6',
+        'pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-6'
       )}
     >
       {/* 桌面：侧栏控制区 */}
-      <aside className="order-2 hidden w-full shrink-0 flex-col gap-4 md:order-1 md:flex md:w-[min(100%,380px)]">
+      <aside className="order-2 hidden w-full shrink-0 flex-col gap-3 md:order-1 md:flex md:w-80 lg:w-96">
         <div className="flex items-center gap-2">
           <Link
             href="/"
@@ -73,47 +74,76 @@ export default function EditorPage() {
           </Link>
         </div>
 
-        <Card>
+        <Card className="shadow-lg">
           <EditorControlsPanel canvasRef={canvasRef} />
         </Card>
       </aside>
 
       {/* 画布预览 */}
       <section className="order-1 min-w-0 flex-1 md:order-2">
-        <div className="sticky top-4 rounded-xl border bg-card p-3 shadow-sm">
-          {/* A4 多页模式：显示页码切换 tabs */}
-          {aspectRatio === 'A4' && parsedLyric && totalPages > 1 && (
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={cn(
-                    'rounded px-2 py-1 text-xs transition-colors',
-                    'border border-border hover:bg-muted',
-                  )}
-                  style={{
-                    backgroundColor: i === activeA4Page ? 'var(--primary)' : 'transparent',
-                    color: i === activeA4Page ? 'white' : 'inherit',
-                  }}
-                  onClick={() => {
-                    setActiveA4Page(i);
-                    // 同步到 store
-                    window.dispatchEvent(new CustomEvent('set-a4-page', { detail: { page: i } }));
-                  }}
-                >
-                  第 {i + 1} 页
-                </button>
-              ))}
+        <div className="sticky top-3 rounded-xl border bg-muted/30 p-3 shadow-sm">
+          {/* 缩放控制 */}
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPreviewScale(s => Math.max(0.5, s - 0.1))}
+              >
+                <ZoomOut className="h-3 w-3" />
+              </Button>
+              <span className="text-xs text-muted-foreground w-12 text-center">
+                {Math.round(previewScale * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))}
+              >
+                <ZoomIn className="h-3 w-3" />
+              </Button>
             </div>
-          )}
-          <p className="mb-3 text-center text-xs text-muted-foreground/60">
+            
+            {/* A4 多页模式：页码切换 */}
+            {aspectRatio === 'A4' && parsedLyric && totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={cn(
+                      'rounded px-2 py-0.5 text-xs transition-all duration-200',
+                      i === activeA4Page
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                    onClick={() => {
+                      setActiveA4Page(i);
+                      window.dispatchEvent(new CustomEvent('set-a4-page', { detail: { page: i } }));
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <p className="mb-2 text-center text-xs text-muted-foreground">
             实时预览 · 导出尺寸与下方画布一致
           </p>
+          
           {loadingLyric ? (
             <Skeleton className="mx-auto aspect-[3/4] w-full max-w-md rounded-lg" />
           ) : parsedLyric ? (
-            <LyricCanvas ref={canvasRef} />
+            <div 
+              className="overflow-auto rounded-lg transition-transform duration-200"
+              style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center' }}
+            >
+              <LyricCanvas ref={canvasRef} />
+            </div>
           ) : (
             <div
               className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-4 text-center text-sm text-destructive"

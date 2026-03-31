@@ -19,10 +19,10 @@ export function TemplateGallery() {
           key={t.id}
           onClick={() => setTemplate(t)}
           className={cn(
-            'group flex flex-col items-center gap-2 rounded-xl border-2 p-2 transition-all duration-200 shrink-0 w-24',
+            'group flex flex-col items-center gap-2 rounded-xl border-2 p-2 transition-all duration-200 shrink-0',
             'hover:scale-105',
             active.id === t.id
-              ? 'border-pink-500 bg-pink-500/5 shadow-lg ring-2 ring-pink-500/30 scale-105'
+              ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/30 scale-105'
               : 'border-transparent hover:border-border hover:bg-muted/50'
           )}
         >

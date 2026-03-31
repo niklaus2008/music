@@ -9,7 +9,7 @@
 import { toPng } from 'html-to-image';
 import type { AspectRatio } from '@/types/template';
 import { CANVAS_SIZE } from '@/types/template';
-import { drawWatermark } from './watermark';
+import { drawWatermark, drawDiagonalWatermark } from './watermark';
 import { zipBlobsStore, type ZipStoreEntry } from './zip-store';
 import type { A4LayoutOptions } from '@/store/editor-store';
 
@@ -275,11 +275,17 @@ async function applyWatermarkIfFree(
           return;
         }
         ctx.drawImage(img, 0, 0);
+        
+        // 右下角品牌水印
         drawWatermark(canvas, {
           fontSize: Math.round(img.width * 0.016),
           offsetX: Math.round(img.width * 0.025),
           offsetY: Math.round(img.height * 0.02),
         });
+        
+        // 斜条防裁水印
+        drawDiagonalWatermark(canvas);
+        
         resolve(canvas.toDataURL('image/png'));
       } catch (e) {
         reject(e);
