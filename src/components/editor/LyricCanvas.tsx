@@ -33,22 +33,27 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cw, height: ch } = CANVAS_SIZE[aspectRatio];
     const [previewScale, setPreviewScale] = useState(1);
-    const [activePage, setActivePage] = useState<number>(0);
     const isA4 = aspectRatio === 'A4';
+    const activePage = a4Layout.activePage;
 
     // 计算 A4 分页
     const totalLines = parsedLyric?.lines.length ?? 0;
     const linesPerPage = a4Layout.linesPerPage;
     const totalPages = isA4 && totalLines > 0 ? Math.ceil(totalLines / linesPerPage) : 1;
 
-    // A4 多页模式下始终显示所有行，通过 CSS 控制显示/隐藏
+    // A4 边距映射
+    const marginMap = { compact: 40, standard: 80, relaxed: 120 };
+    const marginSize = marginMap[a4Layout.margin];
+    
+    // A4 多页模式
     const isA4MultiPage = isA4 && totalPages > 1;
 
-    // 根据是否 A4 多页模式确定显示的歌词行
+    // A4 多页模式：显示当前页的歌词
     const displayLines = useMemo(() => {
       if (!parsedLyric) return [];
-      // A4 多页模式下显示所有行
-      if (isA4MultiPage) {
+      
+      // 非 A4 多页模式按原逻辑
+      if (!isA4MultiPage) {
         if (contentMode === 'quote') {
           const picked = parsedLyric.lines.filter(
             (l) => !l.isBreak && selectedLines.has(l.index)
@@ -57,7 +62,16 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
         }
         return parsedLyric.lines;
       }
-      // 非 A4 多页模式：使用原来的 bodyLines 逻辑
+      
+      // A4 多页模式：只显示当前页的歌词（activePage = -1 表示显示全部，用于导出）
+      if (isA4MultiPage && activePage >= 0) {
+        const start = activePage * linesPerPage;
+        const end = Math.min(start + linesPerPage, totalLines);
+        const result = parsedLyric.lines.filter((_, idx) => idx >= start && idx < end);
+        console.log('[LyricCanvas] displayLines for page', activePage, ':', result.length, 'lines, range:', start, '-', end - 1);
+        return result;
+      }
+      // activePage = -1 时显示全部歌词（导出时使用）
       if (contentMode === 'quote') {
         const picked = parsedLyric.lines.filter(
           (l) => !l.isBreak && selectedLines.has(l.index)
@@ -65,7 +79,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
         return picked.sort((a, b) => a.index - b.index);
       }
       return parsedLyric.lines;
-    }, [parsedLyric, isA4MultiPage, contentMode, selectedLines]);
+    }, [parsedLyric, isA4MultiPage, activePage, linesPerPage, totalLines, contentMode, selectedLines]);
 
     useLayoutEffect(() => {
       const el = containerRef.current;
@@ -92,14 +106,29 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       return () => ro.disconnect();
     }, [cw, ch, isA4]);
 
-    // 监听页码切换事件
+    // 监听 A4 页码切换（来自父组件）
     useEffect(() => {
       const handler = (e: CustomEvent<{ page: number }>) => {
-        setActivePage(e.detail.page);
+        useEditorStore.getState().setA4Layout({ activePage: e.detail.page });
       };
-      window.addEventListener('a4-page-change', handler as EventListener);
-      return () => window.removeEventListener('a4-page-change', handler as EventListener);
+      window.addEventListener('set-a4-page', handler as EventListener);
+      return () => window.removeEventListener('set-a4-page', handler as EventListener);
     }, []);
+
+    // A4 多页模式：监听 activePage 变化，动态更新 CSS 类控制显示
+    useEffect(() => {
+      if (!isA4MultiPage) return;
+      
+      const contentEl = document.querySelector('.a4-content');
+      if (!contentEl) return;
+      
+      // 清除之前的页码类
+      contentEl.classList.remove('show-page-0', 'show-page-1', 'show-page-2', 'show-page-3', 'show-page-4');
+      // 添加当前页的类
+      contentEl.classList.add(`show-page-${activePage}`);
+      
+      console.log('[LyricCanvas] A4 page switched to:', activePage);
+    }, [activePage, isA4MultiPage]);
 
     const metaLine = useMemo(() => {
       if (!currentSong) return '';
@@ -119,7 +148,10 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       return picked.sort((a, b) => a.index - b.index);
     }, [parsedLyric, contentMode, selectedLines]);
 
-    const [pt, pr, pb, pl] = template.layout.padding;
+    // 计算 padding：A4 模式使用边距预设，非 A4 使用模板设置
+    const [pt, pr, pb, pl] = isA4 
+      ? [marginSize, marginSize, marginSize, marginSize] 
+      : template.layout.padding;
     const bgStyle: CSSProperties =
       template.background.type === 'gradient'
         ? { backgroundImage: template.background.value }
@@ -184,7 +216,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
         >
           <div
             ref={ref}
-            className="box-border flex flex-col rounded-sm shadow-sm overflow-y-auto"
+            className={`box-border flex flex-col rounded-sm shadow-sm overflow-y-auto ${isA4MultiPage ? 'a4-content' : ''}`}
             style={{
               width: cw,
               height: isA4 ? 'auto' : ch,
@@ -253,7 +285,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     line.isBreak ? (
                       <div
                         key={`brk-${line.index}`}
-                        className="h-4 w-full shrink-0 basis-full"
+                        className={`h-4 w-full shrink-0 basis-full`}
                         aria-hidden
                         data-export-line
                         data-line-index={line.index}

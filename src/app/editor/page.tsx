@@ -29,8 +29,13 @@ export default function EditorPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [activeA4Page, setActiveA4Page] = useState(0);
   const { currentSong, parsedLyric, loadingLyric, lyricError } = useSongStore();
   const { aspectRatio, a4Layout } = useEditorStore();
+
+  const totalPages = aspectRatio === 'A4' && parsedLyric 
+    ? Math.ceil(parsedLyric.lines.length / a4Layout.linesPerPage) 
+    : 1;
 
   useEffect(() => {
     if (!currentSong) {
@@ -77,24 +82,24 @@ export default function EditorPage() {
       <section className="order-1 min-w-0 flex-1 md:order-2">
         <div className="sticky top-4 rounded-xl border bg-card p-3 shadow-sm">
           {/* A4 多页模式：显示页码切换 tabs */}
-          {aspectRatio === 'A4' && parsedLyric && parsedLyric.lines.length > a4Layout.linesPerPage && (
+          {aspectRatio === 'A4' && parsedLyric && totalPages > 1 && (
             <div className="mb-3 flex flex-wrap items-center justify-center gap-1">
-              {Array.from({ length: Math.ceil(parsedLyric.lines.length / a4Layout.linesPerPage) }, (_, i) => (
+              {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i}
                   type="button"
                   className={cn(
                     'rounded px-2 py-1 text-xs transition-colors',
                     'border border-border hover:bg-muted',
-                    // 使用 CSS 变量控制 active 状态，需要通过内联 style 或 class 传递
                   )}
                   style={{
-                    backgroundColor: i === 0 ? 'var(--primary)' : 'transparent',
-                    color: i === 0 ? 'white' : 'inherit',
+                    backgroundColor: i === activeA4Page ? 'var(--primary)' : 'transparent',
+                    color: i === activeA4Page ? 'white' : 'inherit',
                   }}
                   onClick={() => {
-                    // 通过 URL hash 或其他方式通知 LyricCanvas 切换页码
-                    window.dispatchEvent(new CustomEvent('a4-page-change', { detail: { page: i } }));
+                    setActiveA4Page(i);
+                    // 同步到 store
+                    window.dispatchEvent(new CustomEvent('set-a4-page', { detail: { page: i } }));
                   }}
                 >
                   第 {i + 1} 页

@@ -143,3 +143,35 @@
     @apply font-sans;
   }
 }
+
+/* A4 分页模式：控制每页歌词显示 */
+.a4-content.show-page-0 .a4-page-0 { display: block; }
+.a4-content.show-page-0 .a4-page-1,
+.a4-content.show-page-0 .a4-page-2,
+.a4-content.show-page-0 .a4-page-3,
+.a4-content.show-page-0 .a4-page-4 { display: none; }
+
+.a4-content.show-page-1 .a4-page-1 { display: block; }
+.a4-content.show-page-1 .a4-page-0,
+.a4-content.show-page-1 .a4-page-2,
+.a4-content.show-page-1 .a4-page-3,
+.a4-content.show-page-1 .a4-page-4 { display: none; }
+
+.a4-content.show-page-2 .a4-page-2 { display: block; }
+.a4-content.show-page-2 .a4-page-0,
+.a4-content.show-page-2 .a4-page-1,
+.a4-content.show-page-2 .a4-page-3,
+.a4-content.show-page-2 .a4-page-4 { display: none; }
+
+.a4-content.show-page-3 .a4-page-3 { display: block; }
+.a4-content.show-page-3 .a4-page-0,
+.a4-content.show-page-3 .a4-page-1,
+.a4-content.show-page-3 .a4-page-2,
+.a4-content.show-page-3 .a4-page-4 { display: none; }
+
+.a4-content.show-page-4 .a4-page-4 { display: block; }
+.a4-content.show-page-4 .a4-page-0,
+.a4-content.show-page-4 .a4-page-1,
+.a4-content.show-page-4 .a4-page-2,
+.a4-content.show-page-4 .a4-page-3 { display: none; }
+

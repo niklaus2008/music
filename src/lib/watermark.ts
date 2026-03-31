@@ -19,7 +19,7 @@ interface WatermarkOptions {
 const DEFAULTS: Required<WatermarkOptions> = {
   text: 'LyricCanvas',
   fontSize: 16,
-  color: 'rgba(0, 0, 0, 0.15)',
+  color: 'rgba(255, 255, 255, 0.4)',
   offsetX: 24,
   offsetY: 24,
 };

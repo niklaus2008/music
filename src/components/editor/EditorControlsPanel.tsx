@@ -46,12 +46,12 @@ export function EditorControlsPanel({ canvasRef }: EditorControlsPanelProps) {
         </div>
         <Separator />
         <EditorStylePanel />
-        {!loadingLyric && parsedLyric && (
+        {!loadingLyric && parsedLyric && contentMode === 'quote' && (
           <>
             <Separator />
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">
-                {contentMode === 'quote' ? '勾选金句' : '歌词预览'}
+                勾选金句
               </p>
               <LyricSelector />
             </div>

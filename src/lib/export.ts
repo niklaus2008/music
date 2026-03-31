@@ -212,11 +212,22 @@ async function captureA4Frame(
   node: HTMLElement,
   tier: ExportTier,
   cw: number,
-  ch: number
+  ch: number,
+  pageIndex: number = 0
 ): Promise<string> {
   const scale = SCALE_MAP[tier];
+  
+  // 记录当前可见行数
+  const visibleLines = node.querySelectorAll('[data-line-index]').length;
+  console.log('[captureA4Frame] page', pageIndex + 1, 'visible lines before capture:', visibleLines);
+  
   await new Promise((r) => setTimeout(r, 40));
-  return toPng(node, {
+  
+  // 捕获前确保容器高度正确
+  const containerHeight = node.offsetHeight;
+  console.log('[captureA4Frame] container height:', containerHeight);
+  
+  const result = await toPng(node, {
     pixelRatio: scale,
     cacheBust: true,
     skipAutoScale: true,
@@ -233,6 +244,9 @@ async function captureA4Frame(
       credentials: 'omit',
     },
   });
+  
+  console.log('[captureA4Frame] captured image size:', result.length, 'bytes');
+  return result;
 }
 
 /**
@@ -426,7 +440,7 @@ export async function exportLyricImage(
     console.log('[exportLyricImage] single page, single image');
     prepareA4CaptureLayout(node, cw, ch);
     applyA4LineVisibility(node, null);
-    const raw = await captureA4Frame(node, tier, cw, ch);
+    const raw = await captureA4Frame(node, tier, cw, ch, 0);
     const out = await applyWatermarkIfFree(raw, tier);
     triggerDownload(out, fileName);
     restoreExportStyles(node, backup);
@@ -458,7 +472,7 @@ export async function exportLyricImage(
     // 等待 DOM 更新
     await new Promise((r) => setTimeout(r, 200));
     
-    const raw = await captureA4Frame(node, tier, cw, ch);
+    const raw = await captureA4Frame(node, tier, cw, ch, i);
     const out = await applyWatermarkIfFree(raw, tier);
     zipEntries.push({
       name: `${stem}-第${String(i + 1).padStart(2, '0')}页.png`,

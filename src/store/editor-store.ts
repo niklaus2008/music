@@ -19,6 +19,8 @@ export interface A4LayoutOptions {
   showHeader: boolean;
   /** 显示页脚 */
   showFooter: boolean;
+  /** 当前预览的 A4 页码 */
+  activePage: number;
 }
 
 interface EditorState {
@@ -51,6 +53,7 @@ const defaultA4Layout: A4LayoutOptions = {
   margin: 'standard',
   showHeader: true,
   showFooter: true,
+  activePage: 0,
 };
 
 export const useEditorStore = create<EditorState>((set) => ({

@@ -57,11 +57,23 @@ export function ExportPanel({ canvasRef }: ExportPanelProps) {
     if (!node || !currentSong) return;
     setBusy(true);
     try {
+      // A4 多页模式：导出前先显示所有歌词行，导出完成后再恢复
+      if (aspectRatio === 'A4' && parsedLyric && parsedLyric.lines.length > a4Layout.linesPerPage) {
+        // 临时设置 activePage 为 -1（显示全部）
+        useEditorStore.getState().setA4Layout({ activePage: -1 });
+        // 等待渲染更新
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       await exportLyricImage(node, safeFileName(), 'free', aspectRatio, a4Layout, parsedLyric?.lines.length);
     } catch (e) {
       console.error(e);
       alert('导出失败，请重试或检查浏览器是否拦截下载');
     } finally {
+      // 恢复当前页
+      if (aspectRatio === 'A4') {
+        useEditorStore.getState().setA4Layout({ activePage: 0 });
+      }
       setBusy(false);
     }
   };
