@@ -239,9 +239,12 @@ async function captureA4Frame(
       width: `${cw}px`,
     },
     preferredFontFormat: 'woff2',
-    fetchRequestInit: {
-      mode: 'cors',
-      credentials: 'omit',
+    // 禁用远程字体
+    filter: (node) => {
+      if (node instanceof HTMLLinkElement && node.href?.includes('fonts.googleapis')) {
+        return false;
+      }
+      return true;
     },
   });
   
@@ -347,6 +350,7 @@ export async function exportImage(
   const contentWidth = node.scrollWidth;
   const contentHeight = node.scrollHeight;
 
+  // 禁用远程字体加载，避免字体加载失败导致导出失败
   const dataUrl = await toPng(node, {
     pixelRatio: scale,
     cacheBust: true,
@@ -358,9 +362,13 @@ export async function exportImage(
       height: 'auto',
     },
     preferredFontFormat: 'woff2',
-    fetchRequestInit: {
-      mode: 'cors',
-      credentials: 'omit',
+    // 禁用远程字体，改用系统字体兜底
+    filter: (node) => {
+      // 过滤掉 Google Fonts 的 link 标签
+      if (node instanceof HTMLLinkElement && node.href?.includes('fonts.googleapis')) {
+        return false;
+      }
+      return true;
     },
   });
 
@@ -381,11 +389,14 @@ export async function exportImage(
             return;
           }
           ctx.drawImage(img, 0, 0);
+          // 右下角品牌水印
           drawWatermark(canvas, {
             fontSize: Math.round(img.width * 0.016),
             offsetX: Math.round(img.width * 0.025),
             offsetY: Math.round(img.height * 0.02),
           });
+          // 斜条防裁水印
+          drawDiagonalWatermark(canvas);
           triggerDownload(canvas.toDataURL('image/png'), fileName);
           resolve();
         } catch (e) {
