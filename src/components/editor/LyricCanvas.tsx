@@ -143,11 +143,10 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       console.log('[LyricCanvas] A4 page switched to:', activePage);
     }, [activePage, isA4MultiPage]);
 
+    /** 副标题仅展示歌手，不含专辑/节目等元信息 */
     const metaLine = useMemo(() => {
       if (!currentSong) return '';
-      const artists = currentSong.artists.map((a) => a.name).join(' / ');
-      const album = currentSong.album.name;
-      return `${artists}${album ? ` · ${album}` : ''}`;
+      return currentSong.artists.map((a) => a.name).join(' / ');
     }, [currentSong]);
 
     const bodyLines = useMemo(() => {
@@ -509,32 +508,8 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                   )}
                 </div>
 
-                <footer className="mt-auto shrink-0 space-y-2 pt-8" data-export-footer>
-                  <p
-                    className="opacity-90"
-                    style={{
-                      fontFamily: activeFont,
-                      fontSize: template.copyright.fontSize,
-                      color: template.copyright.color,
-                      textAlign,
-                    }}
-                  >
-                    《{currentSong.name}》 · {currentSong.artists.map((a) => a.name).join(' / ')}
-                    {currentSong.album.name ? ` · ${currentSong.album.name}` : ''}
-                  </p>
-                  <p
-                    className="opacity-75"
-                    style={{
-                      fontFamily: activeFont,
-                      fontSize: Math.max(10, template.copyright.fontSize - 2),
-                      color: template.copyright.color,
-                      textAlign,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    歌词仅供个人学习与非商业使用 · 数据检索来源：网易云音乐
-                  </p>
-                </footer>
+                {/** 页脚已省略：仅保留标题区歌名/歌手与正文歌词，避免重复信息与免责声明占位画布 */}
+                <footer className="hidden" data-export-footer aria-hidden />
               </>
             )}
           </div>

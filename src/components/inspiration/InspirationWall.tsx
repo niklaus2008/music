@@ -1,15 +1,13 @@
 'use client';
 
 /**
- * @fileoverview 歌词广场：官方示例（JSON）+ 本地上传图展示；大图预览为全屏 Dialog
+ * @fileoverview 歌词广场：本地上传图展示；大图预览为全屏 Dialog
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
 import Image from 'next/image';
 import { Trash2, Upload } from 'lucide-react';
-import inspirationData from '@/data/inspiration.json';
-import type { InspirationItem } from '@/types/inspiration';
 import {
   addPlazaUserImage,
   loadPlazaUserImages,
@@ -28,8 +26,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-
-const ITEMS = inspirationData.items as InspirationItem[];
 
 /**
  * 弹窗预览统一结构
@@ -60,16 +56,6 @@ export function InspirationWall({ className }: { className?: string }) {
   const refreshUserImages = useCallback(() => {
     setUserImages(loadPlazaUserImages());
   }, []);
-
-  const openPreviewStatic = (item: InspirationItem) => {
-    setActive({
-      src: item.previewUrl,
-      title: item.title,
-      description: item.description,
-      isDataUrl: false,
-    });
-    setOpen(true);
-  };
 
   const openPreviewUser = (img: PlazaUserImage) => {
     setActive({
@@ -111,7 +97,7 @@ export function InspirationWall({ className }: { className?: string }) {
   return (
     <div className={cn('w-full', className)}>
       <p className="mb-4 text-center text-sm text-muted-foreground">
-        精选示例与本地图片；上传内容仅保存在当前浏览器。
+        上传的图片仅保存在当前浏览器。
       </p>
 
       <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -184,37 +170,6 @@ export function InspirationWall({ className }: { className?: string }) {
           </ul>
         </div>
       ) : null}
-
-      <h3 className="mb-2 text-xs font-medium text-muted-foreground">精选示例</h3>
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        {ITEMS.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => openPreviewStatic(item)}
-              className="group w-full overflow-hidden rounded-xl border bg-card text-left shadow-sm transition hover:border-primary/30 hover:shadow-md"
-            >
-              <div className="relative aspect-[3/4] w-full bg-muted">
-                <Image
-                  src={item.coverUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition group-hover:scale-[1.02]"
-                  sizes="(max-width: 640px) 50vw, 33vw"
-                />
-              </div>
-              <div className="p-2.5 sm:p-3">
-                <p className="line-clamp-2 text-sm font-medium leading-snug">{item.title}</p>
-                {item.description && (
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {item.description}
-                  </p>
-                )}
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

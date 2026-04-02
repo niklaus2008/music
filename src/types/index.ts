@@ -4,4 +4,3 @@
 export * from './song';
 export * from './lyric';
 export * from './template';
-export * from './inspiration';
