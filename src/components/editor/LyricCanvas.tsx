@@ -48,6 +48,11 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     // A4 多页模式
     const isA4MultiPage = isA4 && totalPages > 1;
 
+    // 扑克牌模板特殊元素
+    const isPokerTemplate = template.id === 'poker';
+    // 手账本模板特殊元素
+    const isScrapbookTemplate = template.id === 'scrapbook';
+
     // A4 多页模式：显示当前页的歌词
     const displayLines = useMemo(() => {
       if (!parsedLyric) return [];
@@ -148,6 +153,15 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       return picked.sort((a, b) => a.index - b.index);
     }, [parsedLyric, contentMode, selectedLines]);
 
+    /**
+     * 手账本右页装饰句：与左页同源（当前解析歌词首句非空行），避免硬编码示例歌名；无首句时用歌名。
+     */
+    const scrapbookAccentLine = useMemo(() => {
+      if (!parsedLyric) return currentSong?.name ?? '';
+      const first = parsedLyric.lines.find((l) => !l.isBreak && l.text.trim());
+      return first?.text ?? currentSong?.name ?? '';
+    }, [parsedLyric, currentSong]);
+
     // 计算 padding：A4 模式使用边距预设，非 A4 使用模板设置
     const [pt, pr, pb, pl] = isA4 
       ? [marginSize, marginSize, marginSize, marginSize] 
@@ -217,162 +231,282 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
         >
           <div
             ref={ref}
-            className={`box-border flex flex-col rounded-sm shadow-sm overflow-y-auto ${isA4MultiPage ? 'a4-content' : ''}`}
+            className={`box-border flex flex-col rounded-sm shadow-sm overflow-y-auto ${isA4MultiPage ? 'a4-content' : ''} ${isScrapbookTemplate ? 'relative' : ''}`}
             style={{
               width: cw,
               height: isA4 ? 'auto' : ch,
-              minHeight: isA4 ? ch : undefined,
+              /** 与 CANVAS_SIZE 一致；导出时 `height:auto` 时防止 absolute 手账本导致高度塌成细条 */
+              minHeight: ch,
               ...bgStyle,
               padding: `${pt}px ${pr}px ${pb}px ${pl}px`,
             }}
           >
-            <header className="shrink-0 space-y-2" data-export-header>
-              <h2
-                className="font-semibold leading-tight"
-                style={{
-                  fontFamily: titleFont,
-                  fontSize: bodyFontSize + 8,
-                  color: template.typography.color,
-                  textAlign,
-                }}
-              >
-                {currentSong.name}
-              </h2>
-              <p
-                className="leading-relaxed opacity-90"
-                style={{
-                  fontFamily: activeFont,
-                  fontSize: Math.round(bodyFontSize * 0.55),
-                  color: template.typography.metaColor,
-                  textAlign,
-                }}
-              >
-                {metaLine}
-              </p>
-              {template.copyright.showDivider && (
-                <div
-                  className="mx-auto h-px w-12 opacity-40"
-                  style={{ backgroundColor: template.typography.metaColor }}
-                />
-              )}
-            </header>
-
-            <div
-              className="min-h-0 flex-1 overflow-y-auto pt-6 scrollbar-thin"
-              data-export-body
-            >
-              {emptyQuote ? (
-                <div
-                  className="flex h-full min-h-[200px] items-center justify-center px-6 text-center opacity-70"
-                  style={{
-                    fontFamily: activeFont,
-                    fontSize: bodyFontSize - 2,
-                    color: template.typography.metaColor,
-                    writingMode: isVertical ? 'horizontal-tb' : undefined,
-                  }}
-                >
-                  金句模式：请在左侧勾选要展示的歌词行
+            {/* 扑克牌模板装饰 */}
+            {isPokerTemplate && (
+              <div className="relative">
+                <div className="absolute top-6 left-6 flex flex-col items-center" style={{ color: '#e53935' }}>
+                  <span className="text-2xl font-bold">5</span>
+                  <span className="text-xl">♥</span>
                 </div>
-              ) : isVertical ? (
+                <div className="absolute top-6 right-6 flex flex-col items-center" style={{ color: '#e53935' }}>
+                  <span className="text-sm font-bold">5</span>
+                  <span className="text-xs">♥</span>
+                </div>
+              </div>
+            )}
+
+            {/* 手账本模板：双页布局 */}
+            {isScrapbookTemplate && (
+              <div className="absolute inset-0 flex" data-scrapbook-root>
+                {/* 左页：横排手写歌词（勿用 justify-center + overflow-y：溢出时整块居中会导致 scrollTop=0 仍看不到开头几行） */}
                 <div
-                  className="flex h-full max-h-full flex-row-reverse flex-wrap content-start items-start justify-center gap-x-3 gap-y-1 overflow-y-auto scrollbar-thin"
-                  style={{
-                    fontFamily: activeFont,
-                    fontSize: template.typography.fontSize,
-                    color: template.typography.color,
-                  }}
+                  className="flex h-full min-h-0 w-1/2 flex-col items-center justify-start overflow-y-auto p-6"
+                  data-scrapbook-lyric-column
                 >
-                  {displayLines.map((line) =>
-                    line.isBreak ? (
-                      <div
-                        key={`brk-${line.index}`}
-                        className={`h-4 w-full shrink-0 basis-full`}
-                        aria-hidden
-                        data-export-line
-                        data-line-index={line.index}
-                      />
-                    ) : (
-                      <div
-                        key={line.index}
-                        className="max-h-full shrink-0"
-                        data-export-line
-                        data-line-index={line.index}
+                  <h3 className="mb-4 text-center" style={{ fontFamily: '"ZCOOL KuaiLe", cursive', fontSize: bodyFontSize + 2, color: '#1a4f7a' }}>
+                    《{currentSong.name}》
+                  </h3>
+                  <p className="text-xs mb-6" style={{ fontFamily: activeFont, color: '#5d8aa8' }}>
+                    {currentSong.artists.map((a) => a.name).join(' / ')}
+                  </p>
+                  <div className="w-full space-y-3 text-center">
+                    {emptyQuote ? (
+                      <p
+                        className="px-2 opacity-70"
                         style={{
-                          writingMode: 'vertical-rl',
-                          textOrientation: 'mixed',
-                          lineHeight: template.typography.lineHeight,
-                          letterSpacing: `${template.typography.letterSpacing}em`,
+                          fontFamily: activeFont,
+                          fontSize: bodyFontSize - 2,
+                          color: template.typography.metaColor,
                         }}
                       >
-                        {line.text}
-                      </div>
-                    )
-                  )}
-                </div>
-              ) : contentMode === 'full' ? (
-                <div className="space-y-0" style={horizontalBodyStyle}>
-                  {displayLines.map((line) =>
-                    line.isBreak ? (
-                      <div
-                        key={`brk-${line.index}`}
-                        className="h-4"
-                        data-export-line
-                        data-line-index={line.index}
-                      />
-                    ) : (
-                      <p
-                        key={line.index}
-                        className="m-0"
-                        data-export-line
-                        data-line-index={line.index}
-                      >
-                        {line.text}
+                        金句模式：请在左侧勾选要展示的歌词行
                       </p>
-                    )
+                    ) : (
+                      displayLines.map((line) =>
+                        line.isBreak ? (
+                          <div
+                            key={`${currentSong.id}-brk-${line.index}`}
+                            className="h-4"
+                            aria-hidden
+                          />
+                        ) : (
+                          <p
+                            key={`${currentSong.id}-line-${line.index}`}
+                            className="opacity-85 m-0"
+                            style={{
+                              fontFamily: '"ZCOOL KuaiLe", cursive',
+                              fontSize: bodyFontSize - 2,
+                              color: '#1a4f7a',
+                              lineHeight: 2,
+                            }}
+                          >
+                            {line.text}
+                          </p>
+                        )
+                      )
+                    )}
+                  </div>
+                </div>
+                {/* 分隔线 */}
+                <div className="w-px my-8 opacity-30" style={{ backgroundColor: '#8b7355' }} />
+                {/* 右页：画面与播放器 */}
+                <div className="w-1/2 h-full p-6 flex flex-col items-center justify-center space-y-4">
+                  <h3
+                    className="max-w-full px-1 text-center font-medium leading-snug"
+                    style={{
+                      fontFamily: '"ZCOOL KuaiLe", cursive',
+                      fontSize: bodyFontSize + 2,
+                      color: '#2c3e50',
+                    }}
+                  >
+                    {scrapbookAccentLine.length > 44
+                      ? `${scrapbookAccentLine.slice(0, 44)}…`
+                      : scrapbookAccentLine}
+                  </h3>
+                  <div className="relative w-28 h-28 rounded-full overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a3a5c 0%, #2c5f7c 50%, #4a90a4 100%)', boxShadow: '0 6px 25px rgba(0,0,0,0.2), inset 0 0 30px rgba(135,206,235,0.3)' }}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-full" style={{ background: 'linear-gradient(180deg, #ffd700 0%, #ff9500 50%, #1a4f7a 100%)', boxShadow: '0 0 40px rgba(255,200,0,0.6)' }} />
+                    </div>
+                    <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%)' }} />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 4, color: '#2c3e50' }}>{currentSong.name}</p>
+                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 8, color: '#7f8c8d' }}>{currentSong.artists.map((a) => a.name).join(' / ')}</p>
+                  </div>
+                  <div className="w-full max-w-[140px]">
+                    <div className="h-1.5 rounded-full" style={{ backgroundColor: '#d5d5d5' }}>
+                      <div className="h-full w-1/3 rounded-full" style={{ backgroundColor: '#3498db' }} />
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-[10px]" style={{ color: '#888' }}>1:08</span>
+                      <span className="text-[10px]" style={{ color: '#888' }}>4:19</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-base opacity-50">⟳</span>
+                    <span className="text-base opacity-50">⏮</span>
+                    <span className="text-xl">▶</span>
+                    <span className="text-base opacity-50">⏭</span>
+                    <span className="text-base opacity-50">☰</span>
+                    <span className="text-base" style={{ color: '#e74c3c' }}>♥</span>
+                    <span className="text-base opacity-50">👤</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 手账本已用双页布局独占歌词，避免再渲染默认头/正文/页脚导致叠字 */}
+            {!isScrapbookTemplate && (
+              <>
+                <header className="shrink-0 space-y-2" data-export-header>
+                  <h2
+                    className="font-semibold leading-tight"
+                    style={{
+                      fontFamily: titleFont,
+                      fontSize: bodyFontSize + 8,
+                      color: template.typography.color,
+                      textAlign,
+                    }}
+                  >
+                    {currentSong.name}
+                  </h2>
+                  <p
+                    className="leading-relaxed opacity-90"
+                    style={{
+                      fontFamily: activeFont,
+                      fontSize: Math.round(bodyFontSize * 0.55),
+                      color: template.typography.metaColor,
+                      textAlign,
+                    }}
+                  >
+                    {metaLine}
+                  </p>
+                  {template.copyright.showDivider && (
+                    <div
+                      className="mx-auto h-px w-12 opacity-40"
+                      style={{ backgroundColor: template.typography.metaColor }}
+                    />
+                  )}
+                </header>
+
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto pt-6 scrollbar-thin"
+                  data-export-body
+                >
+                  {emptyQuote ? (
+                    <div
+                      className="flex h-full min-h-[200px] items-center justify-center px-6 text-center opacity-70"
+                      style={{
+                        fontFamily: activeFont,
+                        fontSize: bodyFontSize - 2,
+                        color: template.typography.metaColor,
+                        writingMode: isVertical ? 'horizontal-tb' : undefined,
+                      }}
+                    >
+                      金句模式：请在左侧勾选要展示的歌词行
+                    </div>
+                  ) : isVertical ? (
+                    <div
+                      className="flex h-full max-h-full flex-row-reverse flex-wrap content-start items-start justify-center gap-x-3 gap-y-1 overflow-y-auto scrollbar-thin"
+                      style={{
+                        fontFamily: activeFont,
+                        fontSize: template.typography.fontSize,
+                        color: template.typography.color,
+                      }}
+                    >
+                      {displayLines.map((line) =>
+                        line.isBreak ? (
+                          <div
+                            key={`brk-${line.index}`}
+                            className={`h-4 w-full shrink-0 basis-full`}
+                            aria-hidden
+                            data-export-line
+                            data-line-index={line.index}
+                          />
+                        ) : (
+                          <div
+                            key={line.index}
+                            className="max-h-full shrink-0"
+                            data-export-line
+                            data-line-index={line.index}
+                            style={{
+                              writingMode: 'vertical-rl',
+                              textOrientation: 'mixed',
+                              lineHeight: template.typography.lineHeight,
+                              letterSpacing: `${template.typography.letterSpacing}em`,
+                            }}
+                          >
+                            {line.text}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ) : contentMode === 'full' ? (
+                    <div className="space-y-0" style={horizontalBodyStyle}>
+                      {displayLines.map((line) =>
+                        line.isBreak ? (
+                          <div
+                            key={`brk-${line.index}`}
+                            className="h-4"
+                            data-export-line
+                            data-line-index={line.index}
+                          />
+                        ) : (
+                          <p
+                            key={line.index}
+                            className="m-0"
+                            data-export-line
+                            data-line-index={line.index}
+                          >
+                            {line.text}
+                          </p>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3" style={horizontalBodyStyle}>
+                      {displayLines.map((line) => (
+                        <p
+                          key={line.index}
+                          className="m-0"
+                          data-export-line
+                          data-line-index={line.index}
+                        >
+                          {line.text}
+                        </p>
+                      ))}
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-3" style={horizontalBodyStyle}>
-                  {displayLines.map((line) => (
-                    <p
-                      key={line.index}
-                      className="m-0"
-                      data-export-line
-                      data-line-index={line.index}
-                    >
-                      {line.text}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <footer className="mt-auto shrink-0 space-y-2 pt-8" data-export-footer>
-              <p
-                className="opacity-90"
-                style={{
-                  fontFamily: activeFont,
-                  fontSize: template.copyright.fontSize,
-                  color: template.copyright.color,
-                  textAlign,
-                }}
-              >
-                《{currentSong.name}》 · {currentSong.artists.map((a) => a.name).join(' / ')}
-                {currentSong.album.name ? ` · ${currentSong.album.name}` : ''}
-              </p>
-              <p
-                className="opacity-75"
-                style={{
-                  fontFamily: activeFont,
-                  fontSize: Math.max(10, template.copyright.fontSize - 2),
-                  color: template.copyright.color,
-                  textAlign,
-                  lineHeight: 1.45,
-                }}
-              >
-                歌词仅供个人学习与非商业使用 · 数据检索来源：网易云音乐
-              </p>
-            </footer>
+                <footer className="mt-auto shrink-0 space-y-2 pt-8" data-export-footer>
+                  <p
+                    className="opacity-90"
+                    style={{
+                      fontFamily: activeFont,
+                      fontSize: template.copyright.fontSize,
+                      color: template.copyright.color,
+                      textAlign,
+                    }}
+                  >
+                    《{currentSong.name}》 · {currentSong.artists.map((a) => a.name).join(' / ')}
+                    {currentSong.album.name ? ` · ${currentSong.album.name}` : ''}
+                  </p>
+                  <p
+                    className="opacity-75"
+                    style={{
+                      fontFamily: activeFont,
+                      fontSize: Math.max(10, template.copyright.fontSize - 2),
+                      color: template.copyright.color,
+                      textAlign,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    歌词仅供个人学习与非商业使用 · 数据检索来源：网易云音乐
+                  </p>
+                </footer>
+              </>
+            )}
           </div>
         </div>
       </div>

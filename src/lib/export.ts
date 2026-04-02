@@ -29,6 +29,57 @@ const SEL_EXPORT_LINE = '[data-export-line]';
 const SEL_EXPORT_HEADER = '[data-export-header]';
 const SEL_EXPORT_BODY = '[data-export-body]';
 const SEL_EXPORT_FOOTER = '[data-export-footer]';
+/** 手账本双页容器（见 `LyricCanvas`） */
+const SEL_SCRAPBOOK_ROOT = '[data-scrapbook-root]';
+/** 手账本左页歌词列 */
+const SEL_SCRAPBOOK_LYRIC_COL = '[data-scrapbook-lyric-column]';
+
+/**
+ * 手账本为 absolute 子树，不占文档流；根节点 `height:auto` 时 scrollHeight 近乎只剩 padding，导出成细条。
+ * 导出前暂改为流式布局并展开左栏滚动，使 scrollHeight 含完整歌词。
+ * @param {HTMLElement} root - 画布根节点
+ * @returns {{ el: HTMLElement; cssText: string }[]} 用于 `restoreScrapbookExportDom`
+ */
+function prepareScrapbookExportDom(
+  root: HTMLElement
+): { el: HTMLElement; cssText: string }[] {
+  const scrapRoot = root.querySelector<HTMLElement>(SEL_SCRAPBOOK_ROOT);
+  const lyricCol = root.querySelector<HTMLElement>(SEL_SCRAPBOOK_LYRIC_COL);
+  if (!scrapRoot || !lyricCol) return [];
+
+  const backups: { el: HTMLElement; cssText: string }[] = [
+    { el: scrapRoot, cssText: scrapRoot.style.cssText },
+    { el: lyricCol, cssText: lyricCol.style.cssText },
+  ];
+
+  scrapRoot.style.position = 'relative';
+  scrapRoot.style.inset = 'auto';
+  scrapRoot.style.top = 'auto';
+  scrapRoot.style.left = 'auto';
+  scrapRoot.style.right = 'auto';
+  scrapRoot.style.bottom = 'auto';
+  scrapRoot.style.width = '100%';
+  scrapRoot.style.height = 'auto';
+
+  lyricCol.style.overflow = 'visible';
+  lyricCol.style.height = 'auto';
+  lyricCol.style.maxHeight = 'none';
+  lyricCol.style.minHeight = 'auto';
+
+  return backups;
+}
+
+/**
+ * 恢复手账本导出前改动的内联样式
+ * @param backups - `prepareScrapbookExportDom` 的返回值
+ */
+function restoreScrapbookExportDom(
+  backups: { el: HTMLElement; cssText: string }[]
+): void {
+  for (const { el, cssText } of backups) {
+    el.style.cssText = cssText;
+  }
+}
 
 /**
  * 导出时暂存的样式，用于恢复 DOM
@@ -336,44 +387,54 @@ export async function exportImage(
 ): Promise<void> {
   const scale = SCALE_MAP[tier];
 
-  // 临时设置节点高度为 auto 以捕获完整内容
   const originalStyle = node.getAttribute('style') || '';
-  const originalHeight = node.style.height;
 
-  // 强制内容完全展开
   node.style.height = 'auto';
   node.style.overflow = 'visible';
 
-  // 等待 DOM 更新
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  const scrapbookBackups = prepareScrapbookExportDom(node);
 
-  const contentWidth = node.scrollWidth;
-  const contentHeight = node.scrollHeight;
+  let dataUrl: string | undefined;
 
-  // 禁用远程字体加载，避免字体加载失败导致导出失败
-  const dataUrl = await toPng(node, {
-    pixelRatio: scale,
-    cacheBust: true,
-    skipAutoScale: true,
-    width: contentWidth,
-    height: contentHeight,
-    style: {
-      overflow: 'visible',
-      height: 'auto',
-    },
-    preferredFontFormat: 'woff2',
-    // 禁用远程字体，改用系统字体兜底
-    filter: (node) => {
-      // 过滤掉 Google Fonts 的 link 标签
-      if (node instanceof HTMLLinkElement && node.href?.includes('fonts.googleapis')) {
-        return false;
-      }
-      return true;
-    },
-  });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (scrapbookBackups.length > 0) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+    }
 
-  // 恢复原始样式
-  node.setAttribute('style', originalStyle);
+    const contentWidth = node.scrollWidth;
+    const contentHeight = node.scrollHeight;
+
+    dataUrl = await toPng(node, {
+      pixelRatio: scale,
+      cacheBust: true,
+      skipAutoScale: true,
+      width: contentWidth,
+      height: contentHeight,
+      style: {
+        overflow: 'visible',
+        height: 'auto',
+      },
+      preferredFontFormat: 'woff2',
+      filter: (n) => {
+        if (n instanceof HTMLLinkElement && n.href?.includes('fonts.googleapis')) {
+          return false;
+        }
+        return true;
+      },
+    });
+  } finally {
+    restoreScrapbookExportDom(scrapbookBackups);
+    node.setAttribute('style', originalStyle);
+  }
+
+  if (!dataUrl) {
+    throw new Error('导出截图失败');
+  }
 
   if (tier === 'free') {
     await new Promise<void>((resolve, reject) => {
@@ -389,13 +450,11 @@ export async function exportImage(
             return;
           }
           ctx.drawImage(img, 0, 0);
-          // 右下角品牌水印
           drawWatermark(canvas, {
             fontSize: Math.round(img.width * 0.016),
             offsetX: Math.round(img.width * 0.025),
             offsetY: Math.round(img.height * 0.02),
           });
-          // 斜条防裁水印
           drawDiagonalWatermark(canvas);
           triggerDownload(canvas.toDataURL('image/png'), fileName);
           resolve();

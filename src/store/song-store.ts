@@ -79,6 +79,9 @@ export const useSongStore = create<SongState>((set) => ({
   },
 
   selectSong: async (song: SearchResult) => {
+    /** 用于在异步返回后校验是否仍为当前选中，避免快速切歌时旧请求覆盖新歌歌词 */
+    const requestSongId = song.id;
+
     const detail: SongDetail = {
       id: song.id,
       name: song.name,
@@ -97,34 +100,50 @@ export const useSongStore = create<SongState>((set) => ({
       const res = await fetch(`/api/lyric?id=${song.id}`);
       const json: { data?: RawLyric; error?: string } = await res.json();
       if (!res.ok) {
-        set({
-          parsedLyric: null,
-          loadingLyric: false,
-          lyricError: json.error ?? '获取歌词失败',
-        });
+        set((state) =>
+          state.currentSong?.id !== requestSongId
+            ? {}
+            : {
+                parsedLyric: null,
+                loadingLyric: false,
+                lyricError: json.error ?? '获取歌词失败',
+              }
+        );
         return;
       }
       const raw = json.data;
       if (!raw) {
-        set({
-          parsedLyric: null,
-          loadingLyric: false,
-          lyricError: '暂无歌词数据',
-        });
+        set((state) =>
+          state.currentSong?.id !== requestSongId
+            ? {}
+            : {
+                parsedLyric: null,
+                loadingLyric: false,
+                lyricError: '暂无歌词数据',
+              }
+        );
         return;
       }
       const parsed = parseLyric(raw);
-      set({
-        parsedLyric: parsed,
-        loadingLyric: false,
-        lyricError: null,
-      });
+      set((state) =>
+        state.currentSong?.id !== requestSongId
+          ? {}
+          : {
+              parsedLyric: parsed,
+              loadingLyric: false,
+              lyricError: null,
+            }
+      );
     } catch {
-      set({
-        parsedLyric: null,
-        loadingLyric: false,
-        lyricError: '网络异常，请检查连接后重试',
-      });
+      set((state) =>
+        state.currentSong?.id !== requestSongId
+          ? {}
+          : {
+              parsedLyric: null,
+              loadingLyric: false,
+              lyricError: '网络异常，请检查连接后重试',
+            }
+      );
     }
   },
 

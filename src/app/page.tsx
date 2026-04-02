@@ -26,6 +26,14 @@ export default function HomePage() {
           <p className="mt-1 text-sm text-muted-foreground">
             歌词美学重塑 · 一键生成精美歌词卡片
           </p>
+          <a
+            href="https://daliuai.top/about"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1 rounded-full bg-secondary px-4 py-1.5 text-sm text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            关于我们
+          </a>
         </div>
 
         {/* 模式切换 */}

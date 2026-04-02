@@ -8,6 +8,8 @@ import { xiaohongshuTemplate } from './xiaohongshu';
 import { japaneseTemplate } from './japanese';
 import { chineseClassicTemplate } from './chinese-classic';
 import { pinkTemplate } from './pink';
+import { pokerTemplate } from './poker';
+import { scrapbookTemplate } from './scrapbook';
 import { appleMusicTemplate } from './apple-music';
 import { handwrittenTemplate } from './handwritten';
 import { minimalistTemplate } from './minimalist';
@@ -20,6 +22,8 @@ export const templates: Template[] = [
   japaneseTemplate,
   chineseClassicTemplate,
   pinkTemplate,
+  pokerTemplate,
+  scrapbookTemplate,
   appleMusicTemplate,
   handwrittenTemplate,
   minimalistTemplate,
