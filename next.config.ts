@@ -24,6 +24,8 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "p4.music.126.net", pathname: "/**" },
       { protocol: "http", hostname: "p5.music.126.net", pathname: "/**" },
       { protocol: "http", hostname: "p6.music.126.net", pathname: "/**" },
+      /** 灵感墙静态示例图（picsum） */
+      { protocol: "https", hostname: "picsum.photos", pathname: "/**" },
     ],
   },
 };

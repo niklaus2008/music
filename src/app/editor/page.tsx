@@ -47,7 +47,7 @@ export default function EditorPage() {
   /** 离开编辑器页时释放自定义背景 blob URL，避免泄漏 */
   useEffect(() => {
     return () => {
-      useEditorStore.getState().setCustomBackgroundFromFile(null);
+      useEditorStore.getState().setCustomBackgroundUrl(null);
     };
   }, []);
 

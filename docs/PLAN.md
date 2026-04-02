@@ -1,6 +1,6 @@
 # 技术方案与实施计划
 
-> 最后更新：2026-03-30
+> 最后更新：2026-04-02
 
 本文档与 [README.md](../README.md) 同步维护，记录已确认的产品需求与技术架构。
 
@@ -217,3 +217,8 @@ music/
 | 2026-03-30 | 搜索列表封面：官网返回 `http://p*.music.126.net`，在 `netease.ts` 规范为 https；`next.config` 补充 `http` 的 `remotePatterns` 以兼容 `next/image` |
 | 2026-03-30 | 导出：`pnpm dev` 下「高清下载」弹窗增加「试跑高清导出（开发）」（`paid` 档 3×、无水印），生产构建不包含该按钮 |
 | 2026-03-29 | 搜索与歌词：增加 `searchError` / `lyricError` 状态与界面提示，区分接口失败与无结果 |
+| 2026-04-02 | **灵感墙（MVP）**：静态 `inspiration.json` + 首页「灵感」Tab + `/inspiration`；卡片网格、`Dialog` 预览、「做同款」经 `/api/song` 与 `applyInspirationPreset` 写入 `editor-store` 后跳转编辑器；示例图用 picsum，`next/image` 已配置域名 |
+| 2026-04-02 | **内置底图**：`public/backgrounds/preset-*.png`（9 张）+ `default-backgrounds.ts`；侧栏网格选用；`setCustomBackgroundUrl` + 导出时对非 blob 背景 `fetch` 转 data URL |
+| 2026-04-02 | **字体颜色**：`lyricColor` / `metaColor` 覆盖模板 `typography`；侧栏快捷色 + 取色器；换模板重置为「跟随模板」 |
+| 2026-04-02 | **内置底图折叠**：`EditorStylePanel` 内默认收起，点击标题行 + Chevron 展开网格 |
+| 2026-04-02 | **灵感做同款背景**：`applyInspirationPreset` 将 `previewUrl` 设为 `customBackgroundUrl`，不再清空 |

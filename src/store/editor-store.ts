@@ -39,10 +39,18 @@ interface EditorState {
   /** A4 排版选项 */
   a4Layout: A4LayoutOptions;
   /**
-   * 用户上传的自定义背景图（`URL.createObjectURL`，非空时覆盖模板背景）
-   * @remarks 切换或清除时需 revoke，由 `setCustomBackgroundFromFile` 统一处理
+   * 自定义背景图 URL：`blob:`（本地上传）或站内路径如 `/backgrounds/xxx.png`；非空时覆盖模板背景
+   * @remarks 仅对 `blob:` 调用 `revokeObjectURL`，站内静态路径由 `setCustomBackgroundUrl` 管理
    */
   customBackgroundUrl: string | null;
+  /**
+   * 歌词/标题主色；`null` 表示使用当前模板 `typography.color`
+   */
+  lyricColor: string | null;
+  /**
+   * 副标题、说明、分隔等辅色；`null` 表示使用模板 `typography.metaColor`
+   */
+  metaColor: string | null;
 
   setTemplate: (t: Template) => void;
   setAspectRatio: (r: AspectRatio) => void;
@@ -58,6 +66,35 @@ interface EditorState {
    * @param {File | null} file - 图片文件；`null` 表示移除
    */
   setCustomBackgroundFromFile: (file: File | null) => void;
+  /**
+   * 设置自定义背景为站内绝对路径或外链 URL；`null` 清除背景
+   * @param {string | null} url - 如 `/backgrounds/preset-01.png`
+   */
+  setCustomBackgroundUrl: (url: string | null) => void;
+  /**
+   * 设置歌词主色；`null` 恢复为模板默认
+   * @param {string | null} color - CSS 颜色字符串
+   */
+  setLyricColor: (color: string | null) => void;
+  /**
+   * 设置辅色；`null` 恢复为模板默认
+   * @param {string | null} color - CSS 颜色字符串
+   */
+  setMetaColor: (color: string | null) => void;
+}
+
+/**
+ * 若为 blob URL 则释放，避免泄漏；站内路径不调用 revoke
+ * @param {string | null | undefined} url - 当前背景地址
+ */
+function revokeIfBlob(url: string | null | undefined) {
+  if (url?.startsWith('blob:')) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* 忽略无效 URL */
+    }
+  }
 }
 
 const defaultA4Layout: A4LayoutOptions = {
@@ -78,9 +115,16 @@ export const useEditorStore = create<EditorState>((set) => ({
   fontSize: templates[0].typography.fontSize,
   a4Layout: defaultA4Layout,
   customBackgroundUrl: null,
+  lyricColor: null,
+  metaColor: null,
 
   setTemplate: (t) =>
-    set({ template: t, activeFont: t.typography.bodyFont }),
+    set({
+      template: t,
+      activeFont: t.typography.bodyFont,
+      lyricColor: null,
+      metaColor: null,
+    }),
 
   setAspectRatio: (r) => set({ aspectRatio: r }),
 
@@ -109,13 +153,22 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   setCustomBackgroundFromFile: (file) => {
     set((state) => {
-      if (state.customBackgroundUrl) {
-        URL.revokeObjectURL(state.customBackgroundUrl);
-      }
+      revokeIfBlob(state.customBackgroundUrl);
       if (!file) {
         return { customBackgroundUrl: null };
       }
       return { customBackgroundUrl: URL.createObjectURL(file) };
     });
   },
+
+  setCustomBackgroundUrl: (url) => {
+    set((state) => {
+      revokeIfBlob(state.customBackgroundUrl);
+      return { customBackgroundUrl: url };
+    });
+  },
+
+  setLyricColor: (color) => set({ lyricColor: color }),
+
+  setMetaColor: (color) => set({ metaColor: color }),
 }));

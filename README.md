@@ -32,7 +32,9 @@ pnpm start
 
 ## 目录说明
 
-- `src/app`：页面与路由（`/` 搜索、`/editor` 编辑器）
+- `src/app`：页面与路由（`/` 搜索与榜单与灵感 Tab、`/inspiration` 灵感广场、`/editor` 编辑器）
+- `src/data/inspiration.json`：灵感墙静态示例（可改条目、换图 URL、关联 `songId` 与模板字段）
+- `public/backgrounds/`：编辑器内置底图 PNG（新增/替换后同步 `src/lib/default-backgrounds.ts`）
 - `src/app/api`：`/api/search`、`/api/song`、`/api/lyric` 服务端代理
 - `src/lib`、`src/store`、`src/types`：业务逻辑与状态
 - `docs/PLAN.md`：产品与技术方案与变更记录
@@ -60,3 +62,13 @@ pnpm start
 **2026-04-02（续 4）**：编辑器支持「自定义背景」：上传本地图片作为画布底图（`URL.createObjectURL`），歌词叠于其上，适用于所有风格模板；侧栏可清除背景；离开编辑器页时自动 `revoke` 释放。状态见 `editor-store` 的 `customBackgroundUrl` / `setCustomBackgroundFromFile`。
 
 **2026-04-02（续 5）**：导出前将自定义背景的 `blob:` URL 转为 `data:` 写入画布根节点内联样式，避免 html-to-image 克隆时无法栅格化 blob 背景导致下载图无底图。
+
+**2026-04-02（续 6）**：新增灵感墙：首页 Tab「灵感」与独立路由 `/inspiration` 共用 `InspirationWall`；数据为 `src/data/inspiration.json`；点击卡片先弹窗预览大图，「做同款」时请求 `/api/song` 后 `selectSong` 并套用模板/比例/金句行再进 `/editor`；无 `songId` 的条目仅展示；`next.config` 增加 `picsum.photos` 远程图域名。
+
+**2026-04-02（续 7）**：编辑器「自定义背景」增加 9 张内置底图（`public/backgrounds/preset-01.png` … `preset-09.png`，列表见 `src/lib/default-backgrounds.ts`）；`editor-store` 新增 `setCustomBackgroundUrl`，仅对 `blob:` 做 `revoke`；导出时将站内路径背景 `fetch` 后转 data URL 写入画布，与 blob 背景一致。
+
+**2026-04-02（续 8）**：编辑器增加「歌词主色」「副标题/说明色」：`lyricColor` / `metaColor` 存于 `editor-store`，切换模板时恢复为跟随模板；`LyricCanvas` 主文案区、手账本歌词区、竖排等与该色一致；`src/lib/lyric-color-presets.ts` 提供快捷色板与原生取色器。
+
+**2026-04-02（续 9）**：「内置底图」改为可折叠：默认收起，点击「内置底图」行与下拉箭头展开 3×3 网格。
+
+**2026-04-02（续 10）**：灵感墙「做同款」时将条目 `previewUrl` 写入 `customBackgroundUrl`，编辑画布与弹窗大图一致（此前误清空自定义背景导致仅见模板底）。

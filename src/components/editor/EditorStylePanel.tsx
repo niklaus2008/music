@@ -2,12 +2,13 @@
 
 /**
  * @fileoverview 编辑器样式控制区
- * 比例、全文/金句、字体选择、A4 排版选项、自定义背景图。
+ * 比例、全文/金句、字体大小与字体、歌词/辅色、A4 排版选项、自定义背景图。
  */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { ImagePlus, X } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronDown, ImagePlus, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -22,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { useEditorStore, type A4LayoutOptions } from '@/store/editor-store';
 import { useSongStore } from '@/store/song-store';
 import { fontOptions } from '@/lib/templates';
+import { DEFAULT_BACKGROUND_PRESETS } from '@/lib/default-backgrounds';
+import { LYRIC_COLOR_SWATCHES, META_COLOR_SWATCHES } from '@/lib/lyric-color-presets';
 import type { AspectRatio, ContentMode } from '@/types/template';
 
 const ASPECT_RATIOS: AspectRatio[] = ['1:1', '3:4', '9:16', 'A4'];
@@ -65,6 +68,8 @@ function ContentModeSwitch({
 /** 样式控制面板 */
 export function EditorStylePanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** 内置底图网格是否展开（默认收起以节省侧栏高度） */
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const {
     aspectRatio,
     setAspectRatio,
@@ -78,6 +83,12 @@ export function EditorStylePanel() {
     setA4Layout,
     customBackgroundUrl,
     setCustomBackgroundFromFile,
+    setCustomBackgroundUrl,
+    template,
+    lyricColor,
+    metaColor,
+    setLyricColor,
+    setMetaColor,
   } = useEditorStore();
   const { parsedLyric } = useSongStore();
 
@@ -221,11 +232,82 @@ export function EditorStylePanel() {
         </Select>
       </div>
 
+      {/* 字体颜色 */}
+      <div className="space-y-3">
+        <Label className="text-xs text-muted-foreground">歌词主色</Label>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          影响歌名、正文歌词；选「默认」则使用当前风格预设颜色。
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {LYRIC_COLOR_SWATCHES.map((s) => (
+            <button
+              key={s.label + String(s.value)}
+              type="button"
+              title={s.label}
+              onClick={() => setLyricColor(s.value)}
+              className={cn(
+                'h-8 min-w-[2.75rem] rounded-md border px-1.5 text-[10px] font-medium transition',
+                (lyricColor === null && s.value === null) ||
+                  (s.value !== null && lyricColor === s.value)
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="whitespace-nowrap">自选</span>
+            <input
+              type="color"
+              aria-label="自定义歌词主色"
+              className="h-8 w-10 cursor-pointer rounded border border-input bg-background p-0"
+              value={lyricColor ?? template.typography.color}
+              onChange={(e) => setLyricColor(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <Label className="text-xs text-muted-foreground">副标题 / 说明色</Label>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          用于歌手名、提示文案、分隔线等次要文字。
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {META_COLOR_SWATCHES.map((s) => (
+            <button
+              key={s.label + String(s.value)}
+              type="button"
+              title={s.label}
+              onClick={() => setMetaColor(s.value)}
+              className={cn(
+                'h-8 min-w-[2.75rem] rounded-md border px-1.5 text-[10px] font-medium transition',
+                (metaColor === null && s.value === null) ||
+                  (s.value !== null && metaColor === s.value)
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="whitespace-nowrap">自选</span>
+            <input
+              type="color"
+              aria-label="自定义副标题颜色"
+              className="h-8 w-10 cursor-pointer rounded border border-input bg-background p-0"
+              value={metaColor ?? template.typography.metaColor}
+              onChange={(e) => setMetaColor(e.target.value)}
+            />
+          </label>
+        </div>
+      </div>
+
       {/* 自定义背景图：叠加歌词 */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">自定义背景</Label>
         <p className="text-[10px] leading-snug text-muted-foreground">
-          上传一张图片作为画布底图，歌词会叠在图片上方；不设置则使用当前模板的默认背景。
+          可选内置底图或上传本地图片作为画布底图，歌词会叠在图片上方；不设置则使用当前默认背景。
         </p>
         <input
           ref={fileInputRef}
@@ -234,6 +316,56 @@ export function EditorStylePanel() {
           className="sr-only"
           onChange={handleBackgroundFile}
         />
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setPresetsOpen((o) => !o)}
+            className="flex w-full items-center justify-between gap-2 rounded-md py-1 text-left text-[10px] font-medium text-muted-foreground transition hover:bg-muted/60"
+            aria-expanded={presetsOpen}
+            aria-controls="editor-bg-presets-grid"
+            id="editor-bg-presets-trigger"
+          >
+            <span>内置底图</span>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+                presetsOpen && 'rotate-180'
+              )}
+              aria-hidden
+            />
+          </button>
+          {presetsOpen ? (
+            <div
+              id="editor-bg-presets-grid"
+              className="grid grid-cols-3 gap-2"
+              role="region"
+              aria-labelledby="editor-bg-presets-trigger"
+            >
+              {DEFAULT_BACKGROUND_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  title={p.label}
+                  onClick={() => setCustomBackgroundUrl(p.src)}
+                  className={cn(
+                    'relative aspect-square overflow-hidden rounded-md border-2 bg-muted transition',
+                    customBackgroundUrl === p.src
+                      ? 'border-primary ring-2 ring-primary/25'
+                      : 'border-transparent hover:border-muted-foreground/40'
+                  )}
+                >
+                  <Image
+                    src={p.src}
+                    alt={p.label}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 25vw, 96px"
+                  />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -251,7 +383,7 @@ export function EditorStylePanel() {
               variant="ghost"
               size="sm"
               className="gap-1 text-muted-foreground"
-              onClick={() => setCustomBackgroundFromFile(null)}
+              onClick={() => setCustomBackgroundUrl(null)}
             >
               <X className="h-3.5 w-3.5" />
               清除背景

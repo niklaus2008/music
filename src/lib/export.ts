@@ -98,20 +98,41 @@ async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
 }
 
 /**
- * html-to-image 克隆节点时无法可靠解析 `background-image: url(blob:...)`，导出前写入 data URL，与预览一致。
+ * 将任意可 fetch 的图片地址转为 data URL（用于导出时写入克隆节点）
+ * @param {string} url - blob 或同源/可跨域图片地址
+ */
+async function imageUrlToDataUrl(url: string): Promise<string> {
+  if (url.startsWith('blob:')) {
+    return blobUrlToDataUrl(url);
+  }
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`fetch 背景失败: ${res.status}`);
+  }
+  const blob = await res.blob();
+  return new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = () => reject(new Error('读取图片失败'));
+    fr.readAsDataURL(blob);
+  });
+}
+
+/**
+ * html-to-image 克隆节点时无法可靠解析部分 `background-image`，导出前将自定义背景统一为 data URL。
  * @param {HTMLElement} node - 画布根节点
  */
 async function inlineCustomBackgroundForExport(node: HTMLElement): Promise<void> {
   const { customBackgroundUrl } = useEditorStore.getState();
-  if (!customBackgroundUrl?.startsWith('blob:')) return;
+  if (!customBackgroundUrl) return;
   try {
-    const dataUrl = await blobUrlToDataUrl(customBackgroundUrl);
+    const dataUrl = await imageUrlToDataUrl(customBackgroundUrl);
     node.style.backgroundImage = `url(${dataUrl})`;
     node.style.backgroundSize = 'cover';
     node.style.backgroundPosition = 'center';
     node.style.backgroundRepeat = 'no-repeat';
   } catch (e) {
-    console.error('[export] 自定义背景 blob 转 data URL 失败', e);
+    console.error('[export] 自定义背景转 data URL 失败', e);
   }
 }
 

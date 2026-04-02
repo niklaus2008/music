@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "id": "official-xhs-quote",
+      "title": "小红书 · 金句卡片",
+      "description": "温暖渐变、居中排版，适合社交平台分享。",
+      "coverUrl": "https://picsum.photos/seed/lyriccanvas-xhs/400/533",
+      "previewUrl": "https://picsum.photos/seed/lyriccanvas-xhs/900/1200",
+      "songId": "186016",
+      "templateId": "xiaohongshu",
+      "aspectRatio": "3:4",
+      "contentMode": "quote",
+      "selectedLineIndices": [0, 1, 2]
+    },
+    {
+      "id": "official-minimal",
+      "title": "极简 · 全文排版",
+      "description": "低对比背景与清晰层级，突出歌词本身。",
+      "coverUrl": "https://picsum.photos/seed/lyriccanvas-min/400/533",
+      "previewUrl": "https://picsum.photos/seed/lyriccanvas-min/900/1200",
+      "songId": "186016",
+      "templateId": "minimalist",
+      "aspectRatio": "3:4",
+      "contentMode": "full"
+    },
+    {
+      "id": "official-preview-only",
+      "title": "风格参考（无关联歌曲）",
+      "description": "仅作视觉参考，可前往首页搜索歌曲后自行套用模板。",
+      "coverUrl": "https://picsum.photos/seed/lyriccanvas-ref/400/533",
+      "previewUrl": "https://picsum.photos/seed/lyriccanvas-ref/900/1200"
+    }
+  ]
+}

@@ -30,7 +30,14 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       fontSize,
       a4Layout,
       customBackgroundUrl,
+      lyricColor,
+      metaColor,
     } = useEditorStore();
+
+    /** 歌词/标题主色（用户覆盖或模板默认） */
+    const bodyColor = lyricColor ?? template.typography.color;
+    /** 副标题与说明色 */
+    const metaColorResolved = metaColor ?? template.typography.metaColor;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const { width: cw, height: ch } = CANVAS_SIZE[aspectRatio];
@@ -196,16 +203,26 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const bodyFontSize = fontSize || template.typography.fontSize;
 
     /** 横排正文通用样式 */
-    const horizontalBodyStyle: CSSProperties = {
-      fontFamily: activeFont,
-      fontSize: bodyFontSize,
-      lineHeight: template.typography.lineHeight,
-      letterSpacing: `${template.typography.letterSpacing}em`,
-      color: template.typography.color,
-      textAlign,
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'break-word',
-    };
+    const horizontalBodyStyle: CSSProperties = useMemo(
+      () => ({
+        fontFamily: activeFont,
+        fontSize: bodyFontSize,
+        lineHeight: template.typography.lineHeight,
+        letterSpacing: `${template.typography.letterSpacing}em`,
+        color: bodyColor,
+        textAlign,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+      }),
+      [
+        activeFont,
+        bodyFontSize,
+        bodyColor,
+        template.typography.lineHeight,
+        template.typography.letterSpacing,
+        textAlign,
+      ]
+    );
 
     if (!currentSong || !parsedLyric) {
       return (
@@ -276,10 +293,10 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                   className="flex h-full min-h-0 w-1/2 flex-col items-center justify-start overflow-y-auto p-6"
                   data-scrapbook-lyric-column
                 >
-                  <h3 className="mb-4 text-center" style={{ fontFamily: '"ZCOOL KuaiLe", cursive', fontSize: bodyFontSize + 2, color: '#1a4f7a' }}>
+                  <h3 className="mb-4 text-center" style={{ fontFamily: '"ZCOOL KuaiLe", cursive', fontSize: bodyFontSize + 2, color: bodyColor }}>
                     《{currentSong.name}》
                   </h3>
-                  <p className="text-xs mb-6" style={{ fontFamily: activeFont, color: '#5d8aa8' }}>
+                  <p className="text-xs mb-6" style={{ fontFamily: activeFont, color: metaColorResolved }}>
                     {currentSong.artists.map((a) => a.name).join(' / ')}
                   </p>
                   <div className="w-full space-y-3 text-center">
@@ -289,7 +306,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                         style={{
                           fontFamily: activeFont,
                           fontSize: bodyFontSize - 2,
-                          color: template.typography.metaColor,
+                          color: metaColorResolved,
                         }}
                       >
                         金句模式：请在左侧勾选要展示的歌词行
@@ -309,7 +326,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                             style={{
                               fontFamily: '"ZCOOL KuaiLe", cursive',
                               fontSize: bodyFontSize - 2,
-                              color: '#1a4f7a',
+                              color: bodyColor,
                               lineHeight: 2,
                             }}
                           >
@@ -329,7 +346,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     style={{
                       fontFamily: '"ZCOOL KuaiLe", cursive',
                       fontSize: bodyFontSize + 2,
-                      color: '#2c3e50',
+                      color: bodyColor,
                     }}
                   >
                     {scrapbookAccentLine.length > 44
@@ -343,8 +360,8 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%)' }} />
                   </div>
                   <div className="text-center space-y-1">
-                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 4, color: '#2c3e50' }}>{currentSong.name}</p>
-                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 8, color: '#7f8c8d' }}>{currentSong.artists.map((a) => a.name).join(' / ')}</p>
+                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 4, color: bodyColor }}>{currentSong.name}</p>
+                    <p style={{ fontFamily: activeFont, fontSize: bodyFontSize - 8, color: metaColorResolved }}>{currentSong.artists.map((a) => a.name).join(' / ')}</p>
                   </div>
                   <div className="w-full max-w-[140px]">
                     <div className="h-1.5 rounded-full" style={{ backgroundColor: '#d5d5d5' }}>
@@ -377,7 +394,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     style={{
                       fontFamily: titleFont,
                       fontSize: bodyFontSize + 8,
-                      color: template.typography.color,
+                      color: bodyColor,
                       textAlign,
                     }}
                   >
@@ -388,7 +405,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                     style={{
                       fontFamily: activeFont,
                       fontSize: Math.round(bodyFontSize * 0.55),
-                      color: template.typography.metaColor,
+                      color: metaColorResolved,
                       textAlign,
                     }}
                   >
@@ -397,7 +414,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                   {template.copyright.showDivider && (
                     <div
                       className="mx-auto h-px w-12 opacity-40"
-                      style={{ backgroundColor: template.typography.metaColor }}
+                      style={{ backgroundColor: metaColorResolved }}
                     />
                   )}
                 </header>
@@ -412,7 +429,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                       style={{
                         fontFamily: activeFont,
                         fontSize: bodyFontSize - 2,
-                        color: template.typography.metaColor,
+                        color: metaColorResolved,
                         writingMode: isVertical ? 'horizontal-tb' : undefined,
                       }}
                     >
@@ -424,7 +441,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
                       style={{
                         fontFamily: activeFont,
                         fontSize: template.typography.fontSize,
-                        color: template.typography.color,
+                        color: bodyColor,
                       }}
                     >
                       {displayLines.map((line) =>
