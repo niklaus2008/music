@@ -2,9 +2,12 @@
 
 /**
  * @fileoverview 编辑器样式控制区
- * 比例、全文/金句、字体选择、A4 排版选项。
+ * 比例、全文/金句、字体选择、A4 排版选项、自定义背景图。
  */
 
+import { useRef } from 'react';
+import type { ChangeEvent } from 'react';
+import { ImagePlus, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -61,6 +64,7 @@ function ContentModeSwitch({
 
 /** 样式控制面板 */
 export function EditorStylePanel() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     aspectRatio,
     setAspectRatio,
@@ -72,12 +76,24 @@ export function EditorStylePanel() {
     setFontSize,
     a4Layout,
     setA4Layout,
+    customBackgroundUrl,
+    setCustomBackgroundFromFile,
   } = useEditorStore();
   const { parsedLyric } = useSongStore();
 
   const isA4 = aspectRatio === 'A4';
   const activeFontId =
     fontOptions.find((f) => f.family === activeFont)?.id ?? fontOptions[0].id;
+
+  /**
+   * 选择本地图片作为画布背景（歌词叠加在上方）
+   * @param {ChangeEvent<HTMLInputElement>} e - 文件 input change
+   */
+  const handleBackgroundFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setCustomBackgroundFromFile(file);
+    e.target.value = '';
+  };
 
   return (
     <div className="space-y-5">
@@ -203,6 +219,54 @@ export function EditorStylePanel() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      {/* 自定义背景图：叠加歌词 */}
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">自定义背景</Label>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          上传一张图片作为画布底图，歌词会叠在图片上方；不设置则使用当前模板的默认背景。
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={handleBackgroundFile}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImagePlus className="h-3.5 w-3.5" />
+            上传图片
+          </Button>
+          {customBackgroundUrl ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1 text-muted-foreground"
+              onClick={() => setCustomBackgroundFromFile(null)}
+            >
+              <X className="h-3.5 w-3.5" />
+              清除背景
+            </Button>
+          ) : null}
+        </div>
+        {customBackgroundUrl ? (
+          <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
+            <img
+              src={customBackgroundUrl}
+              alt="自定义背景预览"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

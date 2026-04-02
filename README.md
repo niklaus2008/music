@@ -56,3 +56,7 @@ pnpm start
 **2026-04-02（续 2）**：手账本左页将 `justify-center` 改为 `justify-start` 并加 `min-h-0`，避免纵向溢出时 Flex 居中导致卷动区域顶端仍看不到歌词开头（表现为缺前两行）。
 
 **2026-04-02（续 3）**：非 A4 导出时根节点 `height:auto` 下手账本 `absolute` 子树不占流，`scrollHeight` 过小导致下载图成细条；画布统一 `minHeight: ch`，且 `exportImage` 在截图前将手账本双页改为流式并展开左栏滚动区，使整图包含完整歌词。
+
+**2026-04-02（续 4）**：编辑器支持「自定义背景」：上传本地图片作为画布底图（`URL.createObjectURL`），歌词叠于其上，适用于所有风格模板；侧栏可清除背景；离开编辑器页时自动 `revoke` 释放。状态见 `editor-store` 的 `customBackgroundUrl` / `setCustomBackgroundFromFile`。
+
+**2026-04-02（续 5）**：导出前将自定义背景的 `blob:` URL 转为 `data:` 写入画布根节点内联样式，避免 html-to-image 克隆时无法栅格化 blob 背景导致下载图无底图。

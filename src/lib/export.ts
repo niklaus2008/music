@@ -11,7 +11,7 @@ import type { AspectRatio } from '@/types/template';
 import { CANVAS_SIZE } from '@/types/template';
 import { drawWatermark, drawDiagonalWatermark } from './watermark';
 import { zipBlobsStore, type ZipStoreEntry } from './zip-store';
-import type { A4LayoutOptions } from '@/store/editor-store';
+import { useEditorStore, type A4LayoutOptions } from '@/store/editor-store';
 
 /** 导出质量等级 */
 export type ExportTier = 'free' | 'paid';
@@ -78,6 +78,40 @@ function restoreScrapbookExportDom(
 ): void {
   for (const { el, cssText } of backups) {
     el.style.cssText = cssText;
+  }
+}
+
+/**
+ * 将 blob: URL 转为 data URL，供 html-to-image 将背景栅格化进 PNG
+ * @param {string} blobUrl - `URL.createObjectURL` 结果
+ * @returns {Promise<string>} data URL
+ */
+async function blobUrlToDataUrl(blobUrl: string): Promise<string> {
+  const res = await fetch(blobUrl);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result as string);
+    fr.onerror = () => reject(new Error('读取图片失败'));
+    fr.readAsDataURL(blob);
+  });
+}
+
+/**
+ * html-to-image 克隆节点时无法可靠解析 `background-image: url(blob:...)`，导出前写入 data URL，与预览一致。
+ * @param {HTMLElement} node - 画布根节点
+ */
+async function inlineCustomBackgroundForExport(node: HTMLElement): Promise<void> {
+  const { customBackgroundUrl } = useEditorStore.getState();
+  if (!customBackgroundUrl?.startsWith('blob:')) return;
+  try {
+    const dataUrl = await blobUrlToDataUrl(customBackgroundUrl);
+    node.style.backgroundImage = `url(${dataUrl})`;
+    node.style.backgroundSize = 'cover';
+    node.style.backgroundPosition = 'center';
+    node.style.backgroundRepeat = 'no-repeat';
+  } catch (e) {
+    console.error('[export] 自定义背景 blob 转 data URL 失败', e);
   }
 }
 
@@ -267,6 +301,8 @@ async function captureA4Frame(
   pageIndex: number = 0
 ): Promise<string> {
   const scale = SCALE_MAP[tier];
+
+  await inlineCustomBackgroundForExport(node);
   
   // 记录当前可见行数
   const visibleLines = node.querySelectorAll('[data-line-index]').length;
@@ -388,6 +424,8 @@ export async function exportImage(
   const scale = SCALE_MAP[tier];
 
   const originalStyle = node.getAttribute('style') || '';
+
+  await inlineCustomBackgroundForExport(node);
 
   node.style.height = 'auto';
   node.style.overflow = 'visible';

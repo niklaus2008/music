@@ -38,6 +38,11 @@ interface EditorState {
   fontSize: number;
   /** A4 排版选项 */
   a4Layout: A4LayoutOptions;
+  /**
+   * 用户上传的自定义背景图（`URL.createObjectURL`，非空时覆盖模板背景）
+   * @remarks 切换或清除时需 revoke，由 `setCustomBackgroundFromFile` 统一处理
+   */
+  customBackgroundUrl: string | null;
 
   setTemplate: (t: Template) => void;
   setAspectRatio: (r: AspectRatio) => void;
@@ -48,6 +53,11 @@ interface EditorState {
   setActiveFont: (font: string) => void;
   setFontSize: (size: number) => void;
   setA4Layout: (options: Partial<A4LayoutOptions>) => void;
+  /**
+   * 设置自定义背景：传入本地图片文件或 `null` 清除并恢复模板背景
+   * @param {File | null} file - 图片文件；`null` 表示移除
+   */
+  setCustomBackgroundFromFile: (file: File | null) => void;
 }
 
 const defaultA4Layout: A4LayoutOptions = {
@@ -67,6 +77,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeFont: templates[0].typography.bodyFont,
   fontSize: templates[0].typography.fontSize,
   a4Layout: defaultA4Layout,
+  customBackgroundUrl: null,
 
   setTemplate: (t) =>
     set({ template: t, activeFont: t.typography.bodyFont }),
@@ -95,4 +106,16 @@ export const useEditorStore = create<EditorState>((set) => ({
   setFontSize: (size) => set({ fontSize: size }),
   setA4Layout: (options) =>
     set((state) => ({ a4Layout: { ...state.a4Layout, ...options } })),
+
+  setCustomBackgroundFromFile: (file) => {
+    set((state) => {
+      if (state.customBackgroundUrl) {
+        URL.revokeObjectURL(state.customBackgroundUrl);
+      }
+      if (!file) {
+        return { customBackgroundUrl: null };
+      }
+      return { customBackgroundUrl: URL.createObjectURL(file) };
+    });
+  },
 }));

@@ -44,6 +44,13 @@ export default function EditorPage() {
     }
   }, [currentSong, router]);
 
+  /** 离开编辑器页时释放自定义背景 blob URL，避免泄漏 */
+  useEffect(() => {
+    return () => {
+      useEditorStore.getState().setCustomBackgroundFromFile(null);
+    };
+  }, []);
+
   if (!currentSong) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">

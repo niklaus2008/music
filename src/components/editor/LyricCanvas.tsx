@@ -29,6 +29,7 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
       activeFont,
       fontSize,
       a4Layout,
+      customBackgroundUrl,
     } = useEditorStore();
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -166,16 +167,28 @@ export const LyricCanvas = forwardRef<HTMLDivElement, object>(
     const [pt, pr, pb, pl] = isA4 
       ? [marginSize, marginSize, marginSize, marginSize] 
       : template.layout.padding;
-    const bgStyle: CSSProperties =
-      template.background.type === 'gradient'
-        ? { backgroundImage: template.background.value }
-        : template.background.type === 'image'
-          ? {
-              backgroundImage: `url(${template.background.value})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-          : { backgroundColor: template.background.value };
+    /** 优先使用用户上传背景，否则使用当前模板背景 */
+    const bgStyle: CSSProperties = useMemo(() => {
+      if (customBackgroundUrl) {
+        return {
+          backgroundImage: `url(${customBackgroundUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        };
+      }
+      if (template.background.type === 'gradient') {
+        return { backgroundImage: template.background.value };
+      }
+      if (template.background.type === 'image') {
+        return {
+          backgroundImage: `url(${template.background.value})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        };
+      }
+      return { backgroundColor: template.background.value };
+    }, [customBackgroundUrl, template.background]);
 
     const titleFont = template.typography.titleFont;
     const textAlign = template.typography.textAlign;
