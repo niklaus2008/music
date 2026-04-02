@@ -32,8 +32,9 @@ pnpm start
 
 ## 目录说明
 
-- `src/app`：页面与路由（`/` 搜索与榜单与灵感 Tab、`/inspiration` 灵感广场、`/editor` 编辑器）
-- `src/data/inspiration.json`：灵感墙静态示例（可改条目、换图 URL、关联 `songId` 与模板字段）
+- `src/app`：页面与路由（`/` 搜索与榜单与「歌词广场」Tab、`/inspiration` 歌词广场、`/editor` 编辑器）
+- `src/data/inspiration.json`：歌词广场静态示例卡片（仅展示；可改缩略图与大图 URL、标题文案）
+- `src/lib/plaza-user-images.ts`：歌词广场本地上传图压缩与 `localStorage` 持久化（`lyric-plaza-user-images-v1`）
 - `public/backgrounds/`：编辑器内置底图 PNG（新增/替换后同步 `src/lib/default-backgrounds.ts`）
 - `src/app/api`：`/api/search`、`/api/song`、`/api/lyric` 服务端代理
 - `src/lib`、`src/store`、`src/types`：业务逻辑与状态
@@ -63,7 +64,7 @@ pnpm start
 
 **2026-04-02（续 5）**：导出前将自定义背景的 `blob:` URL 转为 `data:` 写入画布根节点内联样式，避免 html-to-image 克隆时无法栅格化 blob 背景导致下载图无底图。
 
-**2026-04-02（续 6）**：新增灵感墙：首页 Tab「灵感」与独立路由 `/inspiration` 共用 `InspirationWall`；数据为 `src/data/inspiration.json`；点击卡片先弹窗预览大图，「做同款」时请求 `/api/song` 后 `selectSong` 并套用模板/比例/金句行再进 `/editor`；无 `songId` 的条目仅展示；`next.config` 增加 `picsum.photos` 远程图域名。
+**2026-04-02（续 6）**：新增歌词广场（原「灵感」）：首页 Tab「歌词广场」与 `/inspiration` 共用 `InspirationWall`；`inspiration.json` 驱动卡片与弹窗大图预览，仅展示；`next.config` 增加 `picsum.photos` 远程图域名。
 
 **2026-04-02（续 7）**：编辑器「自定义背景」增加 9 张内置底图（`public/backgrounds/preset-01.png` … `preset-09.png`，列表见 `src/lib/default-backgrounds.ts`）；`editor-store` 新增 `setCustomBackgroundUrl`，仅对 `blob:` 做 `revoke`；导出时将站内路径背景 `fetch` 后转 data URL 写入画布，与 blob 背景一致。
 
@@ -71,4 +72,10 @@ pnpm start
 
 **2026-04-02（续 9）**：「内置底图」改为可折叠：默认收起，点击「内置底图」行与下拉箭头展开 3×3 网格。
 
-**2026-04-02（续 10）**：灵感墙「做同款」时将条目 `previewUrl` 写入 `customBackgroundUrl`，编辑画布与弹窗大图一致（此前误清空自定义背景导致仅见模板底）。
+**2026-04-02（续 11）**：歌词广场去掉「做同款」与 `applyInspirationPreset`；Tab 与独立页标题统一为「歌词广场」，仅保留卡片与预览弹窗。
+
+**2026-04-02（续 12）**：歌词广场支持「上传图片」：压缩后存 `localStorage`，在「我的上传」区展示，可删除单张、点击预览大图；与精选示例分区展示。
+
+**2026-04-02（续 13）**：歌词广场本地上传最多保留 **30** 张，超过后移除最先上传的一张（新图始终在列表最前）。
+
+**2026-04-02（续 14）**：歌词广场大图预览改为全屏（`100dvh`）；`DialogContent` 支持 `closeButtonClassName`，关闭按钮在深色图区使用浅色并避让安全区。

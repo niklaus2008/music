@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview 灵感广场独立页（与首页「灵感」Tab 共用组件，便于分享链接）
+ * @fileoverview 歌词广场独立页（与首页「歌词广场」Tab 共用组件，便于分享链接）
  */
 
 import Link from 'next/link';
@@ -27,9 +27,9 @@ export default function InspirationPage() {
           </Link>
         </div>
         <div className="mb-4 text-center">
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">灵感广场</h1>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">歌词广场</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            浏览官方示例，预览后可一键「做同款」
+            浏览歌词卡片示例，支持上传本地图片（仅保存在本机）；点击缩略图可查看大图
           </p>
         </div>
         <div className="rounded-xl border bg-card p-4 sm:p-5">

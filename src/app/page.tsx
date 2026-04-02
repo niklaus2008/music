@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileoverview 首页 - 搜索入口 + 榜单
+ * @fileoverview 首页 - 搜索、云音乐榜单、歌词广场展示 Tab
  */
 
 import { useState } from 'react';
@@ -69,7 +69,7 @@ export default function HomePage() {
                 : 'bg-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            灵感
+            歌词广场
           </button>
         </div>
 

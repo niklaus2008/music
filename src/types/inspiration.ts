@@ -1,11 +1,11 @@
 /**
- * @fileoverview 灵感墙 / 广场静态示例条目类型
+ * @fileoverview 歌词广场静态示例条目类型（仅展示用）
  */
 
 import type { AspectRatio, ContentMode } from '@/types/template';
 
 /**
- * 单条灵感示例（与 `src/data/inspiration.json` 对齐）
+ * 单条展示示例（与 `src/data/inspiration.json` 对齐）
  */
 export interface InspirationItem {
   /** 列表内唯一 id */
@@ -16,12 +16,10 @@ export interface InspirationItem {
   description?: string;
   /** 列表缩略图 URL（建议与 previewUrl 同图不同尺寸或同一图） */
   coverUrl: string;
-  /**
-   * 预览大图 URL（弹窗展示）；「做同款」时会写入编辑器自定义背景，与弹窗视觉一致
-   */
+  /** 弹窗预览大图 URL */
   previewUrl: string;
   /**
-   * 网易云歌曲 id；缺省时仅支持预览，不提供「做同款」
+   * 可选：预留字段（如曾用于跳转编辑器）；当前广场仅展示，可不填
    */
   songId?: string;
   /** 对应内置模板 id，缺省为 `xiaohongshu` */

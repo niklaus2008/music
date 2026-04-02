@@ -43,9 +43,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeButtonClassName,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /** 关闭按钮额外样式（如全屏暗底上需浅色图标） */
+  closeButtonClassName?: string
 }) {
   return (
     <DialogPortal>
@@ -65,7 +68,10 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2 right-2"
+                className={cn(
+                  "absolute top-2 right-2 z-[60]",
+                  closeButtonClassName
+                )}
                 size="icon-sm"
               />
             }
